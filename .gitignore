@@ -1,0 +1,9 @@
+.ipynb_checkpoints/
+.vscode/
+assets/
+data/
+image_net_data/
+other_data/
+pascalvoc_data/
+runs/
+*.ipynb

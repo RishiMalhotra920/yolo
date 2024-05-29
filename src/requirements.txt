@@ -1,0 +1,9 @@
+# install with 
+# conda install --file requirements.txt
+pytorch::pytorch
+torchvision
+torchaudio
+numpy
+matplotlib
+tensorboard
+tqdm
