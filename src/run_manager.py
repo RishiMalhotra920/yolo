@@ -11,11 +11,10 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, run_id: str):
+    def __init__(self, run_dir: str, run_id: str):
         self.run_id = run_id
-        root_dir = "/Users/rishimalhotra/projects/cv/runs"
-        self.writer = SummaryWriter(log_dir=f"{root_dir}/tensorboard/{run_id}")
-        self.checkpoints_dir = Path(f"{root_dir}/checkpoints/{run_id}")
+        self.writer = SummaryWriter(log_dir=f"{run_dir}/tensorboard/{run_id}")
+        self.checkpoints_dir = Path(f"{run_dir}/checkpoints/{run_id}")
 
         self.checkpoints_dir.mkdir(parents=True,
                                    exist_ok=True)
@@ -36,7 +35,7 @@ class RunManager:
 
         for metric_name, metric_dict in metrics.items():
             self.writer.add_scalars(metric_name, metric_dict, epoch)
-            print(f"Epoch: {epoch}, {metric_name}: {metric_dict}")
+            print(f"\nEpoch: {epoch}, {metric_name}: {metric_dict}")
 
             # writer.add_scalar('training/train_loss', train_loss, epoch)
         # writer.add_scalar('training/val_loss', test_loss, epoch)

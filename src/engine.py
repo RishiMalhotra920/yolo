@@ -70,8 +70,9 @@ def train(model: torch.nn.Module,
           optimizer: Optimizer,
           loss_fn: nn.modules.loss._Loss,
           epochs: int,
+          run_dir: str,
           run_id: str,
-          continue_from_checkpoint: Optional[Dict[str, Any]],
+          continue_from_checkpoint: Dict[str, Any],
           num_checkpoints: int,
           device: str):
     """
@@ -95,23 +96,22 @@ def train(model: torch.nn.Module,
     if inp.lower() != "yes":
         raise Exception("Type yes on input...")
 
-    if continue_from_checkpoint is None:
+    if continue_from_checkpoint["run_id"] is None or continue_from_checkpoint["epoch"] is None:
         epoch_start = 0
         epochs = epochs
     else:
         checkpoint_run_id = continue_from_checkpoint['run_id']
         epoch_start = continue_from_checkpoint['epoch']
         epochs = epoch_start + epochs
-        RunManager(checkpoint_run_id).load_model(
+        RunManager(run_dir, checkpoint_run_id).load_model(
             model, epoch_start)
         run_id = checkpoint_run_id + "->" + run_id
 
     print("Starting training for run_id:", run_id)
-    run_manager = RunManager(run_id)
+    run_manager = RunManager(run_dir, run_id)
     checkpoint_interval = epochs // num_checkpoints
 
     for epoch in tqdm(range(epoch_start, epochs), desc="Epochs"):
-        # print(f"Epoch: {epoch+1}/{epochs}")
 
         train_step_dict = train_step(
             model, train_dataloader, loss_fn, optimizer, device)
