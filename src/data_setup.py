@@ -58,15 +58,14 @@ class SubsetImageFolder(BaseDataset):
         return image, label
 
 
-meta = torch.load('../image_net_data/meta.bin')
+meta = torch.load('/Users/rishimalhotra/projects/cv/image_net_data/meta.bin')
 
 
 def get_class_names_from_folder_names(classes: list[str]):
     return [meta[0][s][0] for s in classes]
 
 
-def create_mini_dataloaders(train_dir: str, val_dir: str, classes: list[str], transform: torchvision.transforms.Compose, batch_size: int, num_workers: int):
-
+def create_mini_datasets(train_dir: str, val_dir: str, classes: list[str], transform: torchvision.transforms.Compose):
     mini_train_dataset = SubsetImageFolder(
         root=train_dir, classes=classes, num_samples_per_class=1000, transform=transform)
     mini_val_dataset = SubsetImageFolder(
@@ -74,6 +73,14 @@ def create_mini_dataloaders(train_dir: str, val_dir: str, classes: list[str], tr
 
     assert len(mini_train_dataset) > 0, "Training dataset is empty"
     assert len(mini_val_dataset) > 0, "Validation dataset is empty"
+
+    return mini_train_dataset, mini_val_dataset
+
+
+def create_mini_dataloaders(train_dir: str, val_dir: str, classes: list[str], transform: torchvision.transforms.Compose, batch_size: int, num_workers: int):
+
+    mini_train_dataset, mini_val_dataset = create_mini_datasets(
+        train_dir, val_dir, classes, transform)
 
     class_names = get_class_names_from_folder_names(classes)
 

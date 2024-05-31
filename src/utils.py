@@ -56,7 +56,12 @@ def display_random_images(dataset: BaseDataset,
     plt.show()
 
 
-def predict_on_random_images(model, dataset, *, class_names=None, n=5, seed=None):
+def predict_on_random_images(model: torch.nn.Module,
+                             dataset: BaseDataset,
+                             *,
+                             class_names: list[str] | None = None,
+                             n: int = 5,
+                             seed: int | None = None):
     if seed:
         random.seed(seed)
 
@@ -70,7 +75,7 @@ def predict_on_random_images(model, dataset, *, class_names=None, n=5, seed=None
         ax = axes[i]
         pred_logits = model(image.unsqueeze(0))
         print('pred_logits', pred_logits)
-        pred = torch.argmax(pred_logits.squeeze()).item()
+        pred = int(torch.argmax(pred_logits.squeeze()).item())
         print('pred', pred)
 
         ax.imshow(image.permute(1, 2, 0))
@@ -82,46 +87,3 @@ def predict_on_random_images(model, dataset, *, class_names=None, n=5, seed=None
 
         ax.axis('off')
     plt.show()
-
-
-# def save_model(model: torch.nn.Module,
-#                target_dir: str,
-#                model_name: str):
-#     """Saves a PyTorch model to a target directory.
-
-#     Args:
-#       model: A target PyTorch model to save.
-#       target_dir: A directory for saving the model to.
-#       model_name: A filename for the saved model. Should include
-#         either ".pth" or ".pt" as the file extension.
-
-#     Example usage:
-#       save_model(model=model_0,
-#                  target_dir="models",
-#                  model_name="05_going_modular_tingvgg_model.pth")
-#     """
-#     # Create target directory
-#     target_dir_path = Path(target_dir)
-#     target_dir_path.mkdir(parents=True,
-#                           exist_ok=True)
-
-#     # Create model save path
-#     assert model_name.endswith(".pth") or model_name.endswith(
-#         ".pt"), "model_name should end with '.pt' or '.pth'"
-#     model_save_path = target_dir_path / model_name
-
-#     # Save the model state_dict()
-#     print(f"[INFO] Saving model to: {model_save_path}")
-#     torch.save(obj=model.state_dict(),
-#                f=model_save_path)
-
-
-# def load_model(model, target_dir, model_name):
-#     """Loads a PyTorch model from a target directory."""
-
-#     print(f"[INFO] Loading model from: {model_save_path}")
-
-#     model_save_path = Path(target_dir) / model_name
-
-#     params = torch.load(model_save_path)
-#     model.load_state_dict(params)

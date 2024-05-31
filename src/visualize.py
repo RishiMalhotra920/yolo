@@ -1,11 +1,53 @@
+from utils import display_random_images, predict_on_random_images
+from torchvision import transforms
+
+from data_setup import create_mini_datasets, get_class_names_from_folder_names
+from run_manager import RunManager
+import model_builder
+
+if __name__ == "__main__":
+
+    data_transform = transforms.Compose([
+        transforms.RandomResizedCrop(50),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(30),
+        transforms.ColorJitter(brightness=0.5, contrast=0.5),
+        transforms.ToTensor(),
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406],
+        #  std=[0.229, 0.224, 0.225]),
+        transforms.RandomErasing()
+    ])
+
     to_tensor_transform = transforms.Compose([
         transforms.ToTensor()
     ])
-    mini_train_dataset_no_transform = SubsetImageFolder(
-        root="image_net_data/train", classes=classes, num_samples_per_class=1000, transform=to_tensor_transform)
-    mini_val_dataset_no_transform = SubsetImageFolder(
-        root="image_net_data/val", classes=classes, num_samples_per_class=50, transform=to_tensor_transform)
 
-        predict_on_random_images(mini_model, mini_val_dataset,
-                         class_names=class_names, n=5, seed=4200)
-display_random_images(mini_train_dataset, class_names=class_names, n=5, seed=4)
+    classes = ["n01986214", "n02009912", "n01924916"]
+    class_names = get_class_names_from_folder_names(classes)
+
+    mini_train_dataset, mini_val_dataset = create_mini_datasets(
+        "/Users/rishimalhotra/projects/cv/image_net_data/train",
+        "/Users/rishimalhotra/projects/cv/image_net_data/val",
+        classes,
+        data_transform)
+
+    display_random_images(mini_train_dataset,
+                          class_names=class_names, n=5, seed=4)
+
+    # mini_model = RunManager().load_model(
+    model = model_builder.TinyVGG(
+        hidden_units=128,
+        output_shape=len(classes)
+    ).to("cpu")
+
+    run_dir = "/Users/rishimalhotra/projects/cv/src/runs/"
+    run_id = "128_channels"
+    RunManager(run_dir, run_id).load_model(
+        model,
+        epoch=29
+    )
+
+    predict_on_random_images(model, mini_val_dataset,
+                             class_names=class_names, n=5, seed=4200)
+    # display_random_images(mini_train_dataset,
+    #   class_names=class_names, n=5, seed=4)
