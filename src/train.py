@@ -7,7 +7,7 @@ import model_builder
 from torchvision import transforms
 
 # to call this script, run the following command:
-# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.001 --run_id trial_run_with_128_hidden_units
+# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_id trial_run_with_128_hidden_units
 
 
 def train(args) -> None:
@@ -103,7 +103,7 @@ if __name__ == "__main__":
                         help='Directory containing training data')
     parser.add_argument('--val_dir', type=str, default="../image_net_data/val",
                         help='Directory containing validation data')
-    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/src/runs/",
+    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/runs/",
                         help='Directory to store runs')
 
     args = parser.parse_args()
