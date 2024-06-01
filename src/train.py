@@ -1,3 +1,4 @@
+import mlflow
 import argparse
 import os
 import torch
@@ -5,9 +6,11 @@ import data_setup
 import engine
 import model_builder
 from torchvision import transforms
+import yaml
+config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
-# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_id trial_run_with_128_hidden_units
+# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.001 --run_id trial_run_with_128_hidden_units
 
 
 def train(args) -> None:
@@ -25,14 +28,15 @@ def train(args) -> None:
 
     # Create transforms
     data_transform = transforms.Compose([
-        transforms.RandomResizedCrop(50),
+        # transforms.RandomResizedCrop(50),
+        transforms.Resize((50, 50)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
-        transforms.RandomErasing()
+        # transforms.RandomErasing()
     ])
 
     classes = ["n01986214", "n02009912", "n01924916"]
@@ -61,19 +65,39 @@ def train(args) -> None:
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=args.learning_rate)
 
-    # Start training with help from engine.py
-    engine.train(model=model,
-                 train_dataloader=train_dataloader,
-                 val_dataloader=test_dataloader,
-                 optimizer=optimizer,
-                 loss_fn=loss_fn,
-                 epochs=args.num_epochs,
-                 run_dir=args.run_dir,
-                 run_id=args.run_id,
-                 continue_from_checkpoint={
-                     "run_id": args.continue_from_checkpoint_run_id, "epoch": args.continue_from_checkpoint_epoch},
-                 num_checkpoints=2,
-                 device=args.device)
+    with mlflow.start_run():
+        params = {
+            "num_epochs": args.num_epochs,
+            "learning_rate": args.learning_rate,
+            "batch_size": args.batch_size,
+            "hidden_units": args.hidden_units,
+            "loss_fn": "CrossEntropyLoss",
+            "optimizer": "Adam",
+            "device": args.device,
+        }
+        mlflow.log_params(params)
+
+        with open("model_summary.txt", "w") as f:
+            f.write(str(model))
+
+        # Log model summary
+        mlflow.log_artifact("model_summary.txt")
+
+        # Start training with help from engine.py
+        # engine.train(model=model,
+        #              train_dataloader=train_dataloader,
+        #              val_dataloader=test_dataloader,
+        #              optimizer=optimizer,
+        #              loss_fn=loss_fn,
+        #              epochs=args.num_epochs,
+        #              run_dir=args.run_dir,
+        #              run_id=args.run_id,
+        #              continue_from_checkpoint={
+        #                  "run_id": args.continue_from_checkpoint_run_id, "epoch": args.continue_from_checkpoint_epoch},
+        #              num_checkpoints=args.num_epochs // 5,
+        #              device=args.device)
+
+        # mlflow.pytorch.log_model(model, "models")
 
 
 if __name__ == "__main__":
@@ -99,11 +123,11 @@ if __name__ == "__main__":
                         help='Epoch to continue training from')
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
-    parser.add_argument('--train_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train",
+    parser.add_argument('--train_dir', type=str, default=config["image_net_train_data_path"],
                         help='Directory containing training data')
-    parser.add_argument('--val_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/val",
+    parser.add_argument('--val_dir', type=str, default=config["val_dir"],
                         help='Directory containing validation data')
-    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/repo_hub/training_repo/runs",
+    parser.add_argument('--run_dir', type=str, default=config["run_dir"],
                         help='Directory to store runs')
 
     args = parser.parse_args()
