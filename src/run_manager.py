@@ -3,8 +3,6 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
 from typing import Dict
 
-# TODO: add tqdm support and then push to github.
-
 
 class RunManager:
     '''
