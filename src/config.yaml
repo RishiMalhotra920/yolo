@@ -1,0 +1,4 @@
+image_net_train_data_path: /Users/rishimalhotra/projects/cv/image_classification/image_net_data/train
+image_net_val_data_path: /Users/rishimalhotra/projects/cv/image_classification/image_net_data/val
+run_dir: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/training_repo/runs
+config_file_path: /Users/rishimalhotra/projects/cv/image_classification/image_net_data/meta.bin
