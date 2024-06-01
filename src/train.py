@@ -99,11 +99,11 @@ if __name__ == "__main__":
                         help='Epoch to continue training from')
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
-    parser.add_argument('--train_dir', type=str, default="../image_net_data/train",
+    parser.add_argument('--train_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train",
                         help='Directory containing training data')
-    parser.add_argument('--val_dir', type=str, default="../image_net_data/val",
+    parser.add_argument('--val_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/val",
                         help='Directory containing validation data')
-    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/runs/",
+    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/repo_hub/training_repo/runs",
                         help='Directory to store runs')
 
     args = parser.parse_args()
