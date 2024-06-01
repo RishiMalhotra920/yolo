@@ -1,11 +1,9 @@
 .ipynb_checkpoints/
 .vscode/
 __pycache__/
-assets/
 data/
 image_net_data/
 other_data/
 pascalvoc_data/
-runs/
 *.ipynb
 .DS_Store
