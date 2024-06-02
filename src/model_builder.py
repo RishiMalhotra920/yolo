@@ -10,22 +10,31 @@ class TinyVGG(nn.Module):
 
         self.block_1 = nn.Sequential(
             nn.Conv2d(3, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
             nn.ReLU(),
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
 
         self.block_2 = nn.Sequential(
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
             nn.ReLU(),
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
 
         self.block_3 = nn.Sequential(
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
             nn.ReLU(),
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(num_channels),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
 

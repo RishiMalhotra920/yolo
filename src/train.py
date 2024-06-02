@@ -7,7 +7,7 @@ import model_builder
 from torchvision import transforms
 
 # to call this script, run the following command:
-# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_id trial_run_with_128_hidden_units
+# python train.py --num_epochs 50 --batch_size 32 --hidden_units 128 --learning_rate 0.005 --run_id batch_norm_and_added_relu_unit
 
 
 def train(args) -> None:
@@ -38,8 +38,9 @@ def train(args) -> None:
 
     classes = ["n01986214", "n02009912", "n01924916"]
 
-    cpu_count = os.cpu_count()
-    num_workers = cpu_count if cpu_count is not None else 0
+    # cpu_count = os.cpu_count()
+    # num_workers = cpu_count if cpu_count is not None else 0
+    num_workers = 8
 
     # Create DataLoaders with help from data_setup.py
     train_dataloader, test_dataloader, class_names = data_setup.create_mini_dataloaders(
@@ -108,4 +109,8 @@ if __name__ == "__main__":
                         help='Directory to store runs')
 
     args = parser.parse_args()
-    train(args)
+    try:
+        train(args)
+    except KeyboardInterrupt:
+        # without this: weird issues where KeyboardInterrupt causes a ton of torch_smh_manager processes that never close.
+        print("Training interrupted by user")
