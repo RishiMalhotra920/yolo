@@ -124,3 +124,5 @@ def train(model: torch.nn.Module,
 
         if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epochs - 1):
             run_manager.save_model(model, epoch)
+
+    run_manager.end_run()
