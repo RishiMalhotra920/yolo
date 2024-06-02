@@ -37,6 +37,8 @@ class RunManager:
 
             # writer.add_scalar('training/train_loss', train_loss, epoch)
         # writer.add_scalar('training/val_loss', test_loss, epoch)
+    def end_run(self):
+        self.writer.close()
 
     def save_model(self, model: torch.nn.Module, epoch: int):
         """Saves a PyTorch model to a target directory.
