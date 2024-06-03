@@ -73,7 +73,7 @@ def train(model: torch.nn.Module,
           run_dir: str,
           run_id: str,
           continue_from_checkpoint: Dict[str, Any],
-          num_checkpoints: int,
+          checkpoint_interval: int,
           device: str):
     """
     Train a PyTorch model.
@@ -109,7 +109,6 @@ def train(model: torch.nn.Module,
 
     print("Starting training for run_id:", run_id)
     run_manager = RunManager(run_dir, run_id)
-    checkpoint_interval = epochs // num_checkpoints
 
     for epoch in tqdm(range(epoch_start, epochs), desc="Epochs"):
 

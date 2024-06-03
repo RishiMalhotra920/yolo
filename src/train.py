@@ -23,10 +23,11 @@ def train(args) -> None:
     if args.device == "cuda" and not torch.cuda.is_available():
         raise Exception("CUDA is not available on this device")
 
+    # yolo uses 448x448 images
     # Create transforms
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((50, 50)),
+        transforms.Resize((100, 100)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
@@ -51,6 +52,8 @@ def train(args) -> None:
         batch_size=args.batch_size,
         num_workers=num_workers
     )
+    # print('input data shape is', next(iter(train_dataloader))[0].shape)
+    # input()
 
     # Create model with help from model_builder.py
     model = model_builder.TinyVGG(
@@ -74,7 +77,7 @@ def train(args) -> None:
                  run_id=args.run_id,
                  continue_from_checkpoint={
                      "run_id": args.continue_from_checkpoint_run_id, "epoch": args.continue_from_checkpoint_epoch},
-                 num_checkpoints=2,
+                 checkpoint_interval=args.checkpoint_interval,
                  device=args.device)
 
 
@@ -100,6 +103,8 @@ if __name__ == "__main__":
     parser.add_argument('--continue_from_checkpoint_epoch', type=int, default=None,
                         help='Epoch to continue training from')
     parser.add_argument('--device', type=str, default="cpu",
+                        help='Device to train the model on')
+    parser.add_argument('--checkpoint_interval', type=str, default=10,
                         help='Device to train the model on')
     parser.add_argument('--train_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train",
                         help='Directory containing training data')
