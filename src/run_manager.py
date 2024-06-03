@@ -14,10 +14,10 @@ class RunManager:
     def __init__(self, run_dir: str, run_id: str):
         self.run_id = run_id
         self.writer = SummaryWriter(log_dir=f"{run_dir}/tensorboard/{run_id}")
-        self.checkpoints_dir = Path(f"{run_dir}")
+        self.temp_checkpoints_dir = Path(f"{run_dir}")
 
-        self.checkpoints_dir.mkdir(parents=True,
-                                   exist_ok=True)
+        self.temp_checkpoints_dir.mkdir(parents=True,
+                                        exist_ok=True)
 
     def track_metrics(self, metrics: Dict[str, Dict[str, float]], epoch: int) -> None:
         """
@@ -52,7 +52,7 @@ class RunManager:
         Example usage:
           save_model(model=model_0, epoch=5)
         """
-        model_save_path = self.checkpoints_dir / f"{epoch}.pth"
+        model_save_path = self.temp_checkpoints_dir / f"{epoch}.pth"
 
         # Save the model state_dict()
         print(f"[INFO] Saving model to: {model_save_path}")
