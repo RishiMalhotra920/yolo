@@ -1,3 +1,4 @@
+import yaml
 from typing import cast
 import torchvision
 from torch.utils.data import DataLoader
@@ -6,9 +7,7 @@ from PIL import Image
 import torch
 import os
 from torch.utils.data import Dataset, DataLoader
-
-
-from torch.utils.data import Dataset
+config = yaml.safe_load(open("config.yaml"))
 
 
 class BaseDataset(Dataset):
@@ -58,8 +57,7 @@ class SubsetImageFolder(BaseDataset):
         return image, label
 
 
-meta = torch.load(
-    '/Users/rishimalhotra/projects/cv/image_classification/image_net_data/meta.bin')
+meta = torch.load(config['meta_file_path'])
 
 
 def get_class_names_from_folder_names(classes: list[str]):
@@ -68,9 +66,9 @@ def get_class_names_from_folder_names(classes: list[str]):
 
 def create_mini_datasets(train_dir: str, val_dir: str, classes: list[str], transform: torchvision.transforms.Compose):
     mini_train_dataset = SubsetImageFolder(
-        root=train_dir, classes=classes, num_samples_per_class=1000, transform=transform)
+        root=train_dir, classes=classes, num_samples_per_class=10, transform=transform)
     mini_val_dataset = SubsetImageFolder(
-        root=val_dir, classes=classes, num_samples_per_class=50, transform=transform)
+        root=val_dir, classes=classes, num_samples_per_class=10, transform=transform)
 
     assert len(mini_train_dataset) > 0, "Training dataset is empty"
     assert len(mini_val_dataset) > 0, "Validation dataset is empty"

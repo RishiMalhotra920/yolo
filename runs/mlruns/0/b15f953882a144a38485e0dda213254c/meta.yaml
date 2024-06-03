@@ -1,0 +1,16 @@
+artifact_uri: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/sandbox_repo/runs/mlruns/0/b15f953882a144a38485e0dda213254c/artifacts
+deleted_time: 1717376817558
+end_time: 1717369204336
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: deleted
+run_id: b15f953882a144a38485e0dda213254c
+run_name: funny-lark-307
+run_uuid: b15f953882a144a38485e0dda213254c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1717369204323
+status: 3
+tags: []
+user_id: rishimalhotra

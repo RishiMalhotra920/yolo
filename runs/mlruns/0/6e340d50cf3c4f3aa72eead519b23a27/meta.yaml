@@ -1,0 +1,16 @@
+artifact_uri: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/sandbox_repo/runs/mlruns/0/6e340d50cf3c4f3aa72eead519b23a27/artifacts
+deleted_time: 1717376817562
+end_time: 1717222817821
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: deleted
+run_id: 6e340d50cf3c4f3aa72eead519b23a27
+run_name: nosy-goose-397
+run_uuid: 6e340d50cf3c4f3aa72eead519b23a27
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1717222817812
+status: 3
+tags: []
+user_id: rishimalhotra

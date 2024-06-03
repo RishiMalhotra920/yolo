@@ -1,0 +1,16 @@
+artifact_uri: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/sandbox_repo/runs/mlruns/0/95e01f428d4c4e51945b1374b96bd97d/artifacts
+deleted_time: 1717376817543
+end_time: 1717370400293
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: deleted
+run_id: 95e01f428d4c4e51945b1374b96bd97d
+run_name: trial_run_with_128_hidden_unitsasdfsa
+run_uuid: 95e01f428d4c4e51945b1374b96bd97d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1717370400271
+status: 3
+tags: []
+user_id: rishimalhotra

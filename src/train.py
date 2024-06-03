@@ -1,3 +1,5 @@
+from run_manager import RunManager
+import mlflow
 import argparse
 import os
 import torch
@@ -5,17 +7,14 @@ import data_setup
 import engine
 import model_builder
 from torchvision import transforms
+import yaml
+config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
-# python train.py --num_epochs 50 --batch_size 32 --hidden_units 128 --learning_rate 0.005 --run_id batch_norm_and_added_relu_unit
+# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.001 --run_id trial_run_with_128_hidden_units
 
 
 def train(args) -> None:
-    # Setup hyperparameters
-    NUM_EPOCHS = 2
-    BATCH_SIZE = 32
-    HIDDEN_UNITS = 10
-    LEARNING_RATE = 0.001
 
     # Setup target device
     assert args.device in ["cpu", "cuda"], "Invalid device"
@@ -61,27 +60,51 @@ def train(args) -> None:
         output_shape=len(class_names)
     ).to(args.device)
 
+    run_manager = RunManager(args.run_dir, args.run_id)
+    epoch_start = run_manager.load_checkpoint_if_it_exists(
+        model, checkpoint_path=args.continue_from_checkpoint_path)
+
+    checkpoint_interval = 5
+
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=args.learning_rate)
 
-    # Start training with help from engine.py
-    engine.train(model=model,
-                 train_dataloader=train_dataloader,
-                 val_dataloader=test_dataloader,
-                 optimizer=optimizer,
-                 loss_fn=loss_fn,
-                 epochs=args.num_epochs,
-                 run_dir=args.run_dir,
-                 run_id=args.run_id,
-                 continue_from_checkpoint={
-                     "run_id": args.continue_from_checkpoint_run_id, "epoch": args.continue_from_checkpoint_epoch},
-                 checkpoint_interval=args.checkpoint_interval,
-                 device=args.device)
+    with mlflow.start_run(run_name=args.run_id):
+        params = {
+            "num_epochs": args.num_epochs,
+            "learning_rate": args.learning_rate,
+            "batch_size": args.batch_size,
+            "hidden_units": args.hidden_units,
+            "loss_fn": "CrossEntropyLoss",
+            "optimizer": "Adam",
+            "device": args.device,
+        }
+        mlflow.log_params(params)
+
+        with open("model_summary.txt", "w") as f:
+            f.write(str(model))
+
+        mlflow.log_artifact("model_builder.py")
+        mlflow.log_artifact("model_summary.txt")
+        os.remove("model_summary.txt")
+
+        engine.train(model=model,
+                     train_dataloader=train_dataloader,
+                     val_dataloader=test_dataloader,
+                     optimizer=optimizer,
+                     loss_fn=loss_fn,
+                     epoch_start=epoch_start,
+                     epoch_end=epoch_start + args.num_epochs,
+                     run_manager=run_manager,
+                     checkpoint_interval=checkpoint_interval,
+                     device=args.device)
 
 
 if __name__ == "__main__":
+    mlflow.set_tracking_uri(config["mlflow_uri"])
+
     parser = argparse.ArgumentParser(
         prog='Computer Vision Model Trainer',
         description='Trains a computer vision model for image classification',
@@ -98,24 +121,28 @@ if __name__ == "__main__":
     parser.add_argument('--run_id', type=str, required=True,
                         help='Unique identifier for the run')
 
-    parser.add_argument('--continue_from_checkpoint_run_id', type=str, default=None,
+    parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
                         help='Run ID to continue training from')
-    parser.add_argument('--continue_from_checkpoint_epoch', type=int, default=None,
-                        help='Epoch to continue training from')
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
-    parser.add_argument('--checkpoint_interval', type=str, default=10,
-                        help='Device to train the model on')
-    parser.add_argument('--train_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train",
+    parser.add_argument('--train_dir', type=str, default=config["image_net_train_data_path"],
                         help='Directory containing training data')
-    parser.add_argument('--val_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/image_net_data/val",
+    parser.add_argument('--val_dir', type=str, default=config["image_net_val_data_path"],
                         help='Directory containing validation data')
-    parser.add_argument('--run_dir', type=str, default="/Users/rishimalhotra/projects/cv/image_classification/repo_hub/training_repo/runs",
+    parser.add_argument('--run_dir', type=str, default=config["run_dir"],
                         help='Directory to store runs')
 
     args = parser.parse_args()
+
     try:
+        inp = input(f"Confirm that run_id is {args.run_id}: yes or no: ")
+
+        if inp.lower() != "yes":
+            raise Exception("Type yes on input...")
+
+        print("Starting training for run_id:", args.run_id)
         train(args)
+
     except KeyboardInterrupt:
         # without this: weird issues where KeyboardInterrupt causes a ton of torch_smh_manager processes that never close.
         print("Training interrupted by user")
