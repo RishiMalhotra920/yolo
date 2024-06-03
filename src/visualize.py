@@ -10,14 +10,15 @@ config = yaml.safe_load(open("config.yaml"))
 if __name__ == "__main__":
 
     data_transform = transforms.Compose([
-        transforms.RandomResizedCrop(50),
+        # transforms.RandomResizedCrop(50),
+        transforms.Resize((50, 50)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
         transforms.ToTensor(),
         # transforms.Normalize(mean=[0.485, 0.456, 0.406],
         #  std=[0.229, 0.224, 0.225]),
-        transforms.RandomErasing()
+        # transforms.RandomErasing()
     ])
 
     to_tensor_transform = transforms.Compose([
@@ -48,6 +49,9 @@ if __name__ == "__main__":
     #     model,
     #     epoch=29
     # )
+    checkpoint_path = ""
+    RunManager(config["run_dir"],
+               "random").load_checkpoint_if_it_exists(model, checkpoint_path)
 
     predict_on_random_images(model, mini_val_dataset,
                              class_names=class_names, n=5, seed=4200)
