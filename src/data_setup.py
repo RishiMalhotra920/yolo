@@ -66,9 +66,9 @@ def get_class_names_from_folder_names(classes: list[str]):
 
 def create_mini_datasets(train_dir: str, val_dir: str, classes: list[str], transform: torchvision.transforms.Compose):
     mini_train_dataset = SubsetImageFolder(
-        root=train_dir, classes=classes, num_samples_per_class=10, transform=transform)
+        root=train_dir, classes=classes, num_samples_per_class=1000, transform=transform)
     mini_val_dataset = SubsetImageFolder(
-        root=val_dir, classes=classes, num_samples_per_class=10, transform=transform)
+        root=val_dir, classes=classes, num_samples_per_class=50, transform=transform)
 
     assert len(mini_train_dataset) > 0, "Training dataset is empty"
     assert len(mini_val_dataset) > 0, "Validation dataset is empty"
