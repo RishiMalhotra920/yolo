@@ -43,11 +43,11 @@ if __name__ == "__main__":
         output_shape=len(classes)
     ).to("cpu")
 
-    run_id = "128_channels"
-    RunManager(config["run_dir"], run_id).load_model(
-        model,
-        epoch=29
-    )
+    # run_id = "128_channels"
+    # RunManager(config["run_dir"], run_id).load_model(
+    #     model,
+    #     epoch=29
+    # )
 
     predict_on_random_images(model, mini_val_dataset,
                              class_names=class_names, n=5, seed=4200)
