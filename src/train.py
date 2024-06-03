@@ -22,10 +22,11 @@ def train(args) -> None:
     if args.device == "cuda" and not torch.cuda.is_available():
         raise Exception("CUDA is not available on this device")
 
+    # yolo uses 448x448 images
     # Create transforms
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((50, 50)),
+        transforms.Resize((100, 100)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
@@ -37,8 +38,9 @@ def train(args) -> None:
 
     classes = ["n01986214", "n02009912", "n01924916"]
 
-    cpu_count = os.cpu_count()
-    num_workers = cpu_count if cpu_count is not None else 0
+    # cpu_count = os.cpu_count()
+    # num_workers = cpu_count if cpu_count is not None else 0
+    num_workers = 8
 
     # Create DataLoaders with help from data_setup.py
     train_dataloader, test_dataloader, class_names = data_setup.create_mini_dataloaders(
@@ -49,6 +51,8 @@ def train(args) -> None:
         batch_size=args.batch_size,
         num_workers=num_workers
     )
+    # print('input data shape is', next(iter(train_dataloader))[0].shape)
+    # input()
 
     # Create model with help from model_builder.py
     model = model_builder.TinyVGG(
@@ -59,6 +63,8 @@ def train(args) -> None:
     run_manager = RunManager(args.run_dir, args.run_id)
     epoch_start = run_manager.load_checkpoint_if_it_exists(
         model, checkpoint_path=args.continue_from_checkpoint_path)
+
+    checkpoint_interval = 5
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -92,7 +98,7 @@ def train(args) -> None:
                      epoch_start=epoch_start,
                      epoch_end=epoch_start + args.num_epochs,
                      run_manager=run_manager,
-                     checkpoint_interval=args.num_epochs // 5,
+                     checkpoint_interval=checkpoint_interval,
                      device=args.device)
 
 
@@ -128,11 +134,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    inp = input(f"Confirm that run_id is {args.run_id}: yes or no: ")
+    try:
+        inp = input(f"Confirm that run_id is {args.run_id}: yes or no: ")
 
-    if inp.lower() != "yes":
-        raise Exception("Type yes on input...")
+        if inp.lower() != "yes":
+            raise Exception("Type yes on input...")
 
-    print("Starting training for run_id:", args.run_id)
+        print("Starting training for run_id:", args.run_id)
+        train(args)
 
-    train(args)
+    except KeyboardInterrupt:
+        # without this: weird issues where KeyboardInterrupt causes a ton of torch_smh_manager processes that never close.
+        print("Training interrupted by user")

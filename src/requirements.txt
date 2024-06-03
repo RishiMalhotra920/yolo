@@ -3,6 +3,7 @@
 pytorch::pytorch
 torchvision
 torchaudio
+torchinfo
 numpy
 matplotlib
 tensorboard

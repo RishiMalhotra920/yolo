@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((50, 50)),
+        transforms.Resize((100, 100)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
