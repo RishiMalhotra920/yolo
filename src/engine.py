@@ -69,11 +69,10 @@ def train(model: torch.nn.Module,
           val_dataloader: DataLoader,
           optimizer: Optimizer,
           loss_fn: nn.modules.loss._Loss,
-          epochs: int,
-          run_dir: str,
-          run_id: str,
-          continue_from_checkpoint: Dict[str, Any],
-          num_checkpoints: int,
+          epoch_start: int,
+          epoch_end: int,
+          run_manager: RunManager,
+          checkpoint_interval: int,
           device: str):
     """
     Train a PyTorch model.
@@ -91,27 +90,7 @@ def train(model: torch.nn.Module,
         device: The device to run the model on.
     """
 
-    inp = input(f"Confirm that run_id is {run_id}: yes or no: ")
-
-    if inp.lower() != "yes":
-        raise Exception("Type yes on input...")
-
-    if continue_from_checkpoint["run_id"] is None or continue_from_checkpoint["epoch"] is None:
-        epoch_start = 0
-        epochs = epochs
-    else:
-        checkpoint_run_id = continue_from_checkpoint['run_id']
-        epoch_start = continue_from_checkpoint['epoch']
-        epochs = epoch_start + epochs
-        RunManager(run_dir, checkpoint_run_id).load_model(
-            model, epoch_start)
-        run_id = checkpoint_run_id + "->" + run_id
-
-    print("Starting training for run_id:", run_id)
-    run_manager = RunManager(run_dir, run_id)
-    checkpoint_interval = epochs // num_checkpoints
-
-    for epoch in tqdm(range(epoch_start, epochs), desc="Epochs"):
+    for epoch in tqdm(range(epoch_start, epoch_end), desc="Epochs"):
 
         train_step_dict = train_step(
             model, train_dataloader, loss_fn, optimizer, device)
@@ -122,5 +101,5 @@ def train(model: torch.nn.Module,
             'top_k_accuracy': {'train': train_step_dict["top_k_accuracy"], 'val': val_step_dict["top_k_accuracy"]}
         }, epoch)
 
-        if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epochs - 1):
+        if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)

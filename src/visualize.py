@@ -29,8 +29,8 @@ if __name__ == "__main__":
 
     print('condif', config)
     mini_train_dataset, mini_val_dataset = create_mini_datasets(
-        config["train_dir"],
-        config["val_dir"],
+        config["image_net_train_data_path"],
+        config["image_net_val_data_path"],
         classes,
         data_transform)
 
