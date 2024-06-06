@@ -1,0 +1,15 @@
+artifact_uri: /root/cv/image_classification/repo_hub/training_repo/runs/mlruns/0/55d577913ac3424ba1445f5e2bf6b7c3/artifacts
+end_time: 1717565013754
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 55d577913ac3424ba1445f5e2bf6b7c3
+run_name: trial_cuda_run
+run_uuid: 55d577913ac3424ba1445f5e2bf6b7c3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1717564623091
+status: 3
+tags: []
+user_id: root

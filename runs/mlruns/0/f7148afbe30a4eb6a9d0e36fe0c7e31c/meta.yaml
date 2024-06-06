@@ -1,0 +1,15 @@
+artifact_uri: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/sandbox_repo/runs/mlruns/0/f7148afbe30a4eb6a9d0e36fe0c7e31c/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: f7148afbe30a4eb6a9d0e36fe0c7e31c
+run_name: 100_by_100_images_and_deeper_net_with_higher_lr
+run_uuid: f7148afbe30a4eb6a9d0e36fe0c7e31c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1717395482750
+status: 1
+tags: []
+user_id: rishimalhotra

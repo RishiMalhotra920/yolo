@@ -1,5 +1,5 @@
 artifact_uri: /Users/rishimalhotra/projects/cv/image_classification/repo_hub/sandbox_repo/runs/mlruns/0/c6068a4a9bf745548741aa3b76ed22a1/artifacts
-end_time: null
+end_time: 1717389721862
 entry_point_name: ''
 experiment_id: '0'
 lifecycle_stage: active
@@ -10,6 +10,6 @@ source_name: ''
 source_type: 4
 source_version: ''
 start_time: 1717388809272
-status: 1
+status: 3
 tags: []
 user_id: rishimalhotra
