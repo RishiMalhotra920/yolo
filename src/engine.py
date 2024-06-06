@@ -96,12 +96,10 @@ def train(model: torch.nn.Module,
             model, train_dataloader, loss_fn, optimizer, device)
         val_step_dict = test_step(model, val_dataloader, loss_fn, device)
 
-        run_manager.track_metrics({
-            'loss': {'train': train_step_dict["loss"], 'val': val_step_dict["loss"]},
-            'top_k_accuracy': {'train': train_step_dict["top_k_accuracy"], 'val': val_step_dict["top_k_accuracy"]}
-        }, epoch)
+        run_manager.log_metrics({"train/loss": train_step_dict["loss"],
+                                 "val/loss": val_step_dict["loss"],
+                                 "train/accuracy": train_step_dict["top_k_accuracy"],
+                                 "val/accuracy": val_step_dict["top_k_accuracy"]}, epoch)
 
         if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)
-
-    run_manager.end_run()

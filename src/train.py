@@ -1,5 +1,5 @@
-from run_manager import RunManager
-import mlflow
+from run_manager import RunManager, load_checkpoint
+
 import argparse
 import os
 import torch
@@ -60,9 +60,12 @@ def train(args) -> None:
         output_shape=len(class_names)
     ).to(args.device)
 
-    run_manager = RunManager(args.run_dir, args.run_id)
-    epoch_start = run_manager.load_checkpoint_if_it_exists(
-        model, checkpoint_path=args.continue_from_checkpoint_path)
+    run_manager = RunManager(args.run_id)
+    if args.continue_from_checkpoint_run_id is not None and args.continue_from_checkpoint_path is None:
+        epoch_start = load_checkpoint(
+            model, run_id=args.continue_from_checkpoint_run_id, checkpoint_path=args.continue_from_checkpoint_path)
+    else:
+        epoch_start = 0
 
     checkpoint_interval = 5
 
@@ -71,39 +74,38 @@ def train(args) -> None:
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=args.learning_rate)
 
-    with mlflow.start_run(run_name=args.run_id):
-        params = {
-            "num_epochs": args.num_epochs,
-            "learning_rate": args.learning_rate,
-            "batch_size": args.batch_size,
-            "hidden_units": args.hidden_units,
-            "loss_fn": "CrossEntropyLoss",
-            "optimizer": "Adam",
-            "device": args.device,
-        }
-        mlflow.log_params(params)
+    parameters = {
+        "num_epochs": args.num_epochs,
+        "learning_rate": args.learning_rate,
+        "batch_size": args.batch_size,
+        "hidden_units": args.hidden_units,
+        "loss_fn": "CrossEntropyLoss",
+        "optimizer": "Adam",
+        "device": args.device,
+    }
 
-        with open("model_summary.txt", "w") as f:
-            f.write(str(model))
+    run_manager.log_data({"parameters": parameters,
+                          "model/summary": str(model),
+                          })
 
-        mlflow.log_artifact("model_builder.py")
-        mlflow.log_artifact("model_summary.txt")
-        os.remove("model_summary.txt")
+    run_manager.log_files({"model/code": "model_builder.py"
+                           })
 
-        engine.train(model=model,
-                     train_dataloader=train_dataloader,
-                     val_dataloader=test_dataloader,
-                     optimizer=optimizer,
-                     loss_fn=loss_fn,
-                     epoch_start=epoch_start,
-                     epoch_end=epoch_start + args.num_epochs,
-                     run_manager=run_manager,
-                     checkpoint_interval=checkpoint_interval,
-                     device=args.device)
+    engine.train(model=model,
+                 train_dataloader=train_dataloader,
+                 val_dataloader=test_dataloader,
+                 optimizer=optimizer,
+                 loss_fn=loss_fn,
+                 epoch_start=epoch_start,
+                 epoch_end=epoch_start + args.num_epochs,
+                 run_manager=run_manager,
+                 checkpoint_interval=checkpoint_interval,
+                 device=args.device)
+
+    run_manager.end_run()
 
 
 if __name__ == "__main__":
-    mlflow.set_tracking_uri(config["mlflow_uri"])
 
     parser = argparse.ArgumentParser(
         prog='Computer Vision Model Trainer',
@@ -121,8 +123,10 @@ if __name__ == "__main__":
     parser.add_argument('--run_id', type=str, required=True,
                         help='Unique identifier for the run')
 
-    parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
+    parser.add_argument('--continue_from_checkpoint_run_id', type=str, default=None,
                         help='Run ID to continue training from')
+    parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
+                        help='Checkpoint path for the run continue training from')
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
     parser.add_argument('--train_dir', type=str, default=config["image_net_train_data_path"],
