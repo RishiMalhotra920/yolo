@@ -1,9 +1,15 @@
+import io
 import os
-import mlflow
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
+import matplotlib.pyplot as plt
+import PIL.Image as Image
+import neptune
+import yaml
+import shutil
+config = yaml.safe_load(open("config.yaml"))
 
 
 class RunManager:
@@ -11,37 +17,81 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, run_dir: str, run_id: str):
-        self.run_id = run_id
-        self.writer = SummaryWriter(log_dir=f"{run_dir}/tensorboard/{run_id}")
-        self.temp_checkpoints_dir = Path(f"{run_dir}")
+    def __init__(self, run_name: str):
+        self.run_id = run_name
+        self.temp_dir = Path("temp")
+        print('temp', str(self.temp_dir))
+        self.temp_dir.mkdir(exist_ok=True)
 
-        self.temp_checkpoints_dir.mkdir(parents=True,
-                                        exist_ok=True)
+        self.run = neptune.init_run(
+            project="towards-hi/image-classification",
+            api_token=config["neptune_api_token"],
+            name=run_name
+        )
 
-    def track_metrics(self, metrics: Dict[str, Dict[str, float]], epoch: int) -> None:
+    def log_data(self, data: Dict[str, Any]) -> None:
         """
-        Track metrics for the run and plot it on tensorboard.
+        Log data to the run.
+
+        Args:
+          data: a dictionary of data to log.
+
+        Example:
+          data = {
+            "num_epochs": 10,
+            "learning_rate": 0.001,
+            "batch_size": 32,
+            "hidden_units": 512,
+            "loss_fn": "CrossEntropyLoss",
+            "optimizer": "Adam",
+            "device": "cuda"
+          }
+        """
+        for key in data:
+            self.run[key] = data[key]
+
+    def log_files(self, files: Dict[str, str]) -> None:
+        """
+        Log files to the run.
+
+        Args:
+          files: a dictionary of files to log.
+
+        Example:
+          files = {
+            "model/code": "model_builder.py"
+          }
+        """
+        for key in files:
+            self.run[key].upload(files[key])
+
+    def log_metrics(self, metrics: Dict[str, float], epoch: int) -> None:
+        """
+        Track metrics for the run and plot it on neptune.
 
         Args:
           metrics: a dictionary of metrics to track.
 
         Example:
           metrics = {
-            'loss': {'train': 0.1, 'val': 0.2},
-            'accuracy': {'train': 0.9, 'val': 0.8}
+            "train/loss": 0.5,
+            "val/loss": 0.3,
+            "train/accuracy": 0.8,
+            "val/accuracy": 0.9
           }
         """
 
-        for metric_name, metric_dict in metrics.items():
-            self.writer.add_scalars(metric_name, metric_dict, epoch)
-            print(f"\nEpoch: {epoch}, {metric_name}: {metric_dict}")
-
-            # writer.add_scalar('training/train_loss', train_loss, epoch)
-        # writer.add_scalar('training/val_loss', test_loss, epoch)
+        for metric_name in metrics:
+            self.run[metric_name].append(metrics[metric_name], step=epoch)
+            # print(f"\nEpoch: {epoch}, {metric_name}: {metrics[metric_name]}")
 
     def end_run(self):
-        self.writer.close()
+        self.run.stop()
+        try:
+            shutil.rmtree(self.temp_dir)
+
+        except Exception as e:
+            print(f"Failed to remove directory: {e}")
 
     def save_model(self, model: torch.nn.Module, epoch: int) -> None:
         """Saves a PyTorch model to a target directory.
@@ -53,37 +103,52 @@ class RunManager:
         Example usage:
           save_model(model=model_0, epoch=5)
         """
-        model_save_path = self.temp_checkpoints_dir / f"{epoch}.pth"
+        # Note that model should be saved as epoch_{epoch}.pth
+        # to add more info, do this: epoch_{epoch}_lr_{lr}_bs_{bs}.pth
+        # later on you can implement a json file to store info about checkpoints
 
-        # Save the model state_dict()
-        print(f"[INFO] Saving model to: {model_save_path}")
-        torch.save(obj=model.state_dict(),
-                   f=model_save_path)
-        mlflow.log_artifact(str(model_save_path), artifact_path="checkpoints")
-        os.remove(model_save_path)
+        model_save_path = self.temp_dir / f"{epoch}.pth"
+        print(f"[INFO] Saving model to {model_save_path}")
+        torch.save(obj=model.state_dict(), f=model_save_path)
+        self.run[f"checkpoints/epoch_{epoch}"].upload(str(model_save_path))
 
-    def load_checkpoint_if_it_exists(self, model: torch.nn.Module, checkpoint_path: str) -> int:
-        """
-        Loads a PyTorch model weights from a run at an epoch.
-        Args:
-          model: A target PyTorch model to load.
-          epoch: The epoch number to load the model from.
 
-        Example usage:
-          load_model(model=model_0, epoch=5)
-        """
-        if checkpoint_path is None:
-            # checkpoint_path = self.checkpoints_dir / f"{self.run_id}.pth"
-            print(f"[INFO] Not loading model")
-            return 0
+def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -> int:
+    """
+    Loads a PyTorch model weights from a run at an epoch.
+    Args:
+        model: A target PyTorch model to load.
+        epoch: The epoch number to load the model from.
 
-        if not Path(checkpoint_path).exists():
-            print(f"[INFO] Checkpoint not found at: {checkpoint_path}")
-            return 0
+    Example usage:
+        load_model(model=model_0, epoch=5)
+    """
+    assert not checkpoint_path.endswith(
+        ".pth"), "checkpoint_path should not end with .pth"
 
-        print(f"[INFO] Loading checkpoint from: {checkpoint_path}")
-        checkpoint_run_id = checkpoint_path.split("/")[-2]
-        epoch_start = int(checkpoint_path.split("/")[-1].split(".")[0])
-        params = torch.load(checkpoint_path)
-        model.load_state_dict(params)
-        return epoch_start
+    # save to temp_dir/{file_name}.pth
+    temp_dir = Path("temp")
+    temp_dir.mkdir(exist_ok=True)
+    run = neptune.init_run(
+        project="towards-hi/image-classification",
+        with_id=run_id,
+        mode="read-only",
+        api_token=config["neptune_api_token"])
+    run[checkpoint_path].download(destination=str(temp_dir))
+
+    # load from temp_dir/{file_name}.pth into model
+    file_name = checkpoint_path.split("/")[-1]
+    params = torch.load(temp_dir/f"{file_name}.pth")
+    model.load_state_dict(params)
+
+    # file_name should be epoch_{epoch}.pth
+    epoch_number = int(file_name.split("_")[1])
+
+    print('this is epoch_number', epoch_number)
+
+    try:
+        shutil.rmtree(temp_dir)
+    except Exception as e:
+        print(f"Failed to remove directory: {e}")
+
+    return epoch_number

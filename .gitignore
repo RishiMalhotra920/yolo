@@ -6,5 +6,6 @@ image_net_data/
 other_data/
 pascalvoc_data/
 src/config.yaml
+src/.neptune/
 *.ipynb
 .DS_Store

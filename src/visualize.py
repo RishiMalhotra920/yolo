@@ -2,7 +2,7 @@ from utils import display_random_images, predict_on_random_images
 from torchvision import transforms
 import yaml
 from data_setup import create_mini_datasets, get_class_names_from_folder_names
-from run_manager import RunManager
+from run_manager import load_checkpoint
 import model_builder
 config = yaml.safe_load(open("config.yaml"))
 
@@ -35,8 +35,8 @@ if __name__ == "__main__":
         classes,
         data_transform)
 
-    display_random_images(mini_train_dataset,
-                          class_names=class_names, n=5, seed=4)
+    # display_random_images(mini_train_dataset,
+    #   class_names=class_names, n=5, seed=4)
 
     # mini_model = RunManager().load_model(
     model = model_builder.TinyVGG(
@@ -49,11 +49,11 @@ if __name__ == "__main__":
     #     model,
     #     epoch=29
     # )
-    checkpoint_path = ""
-    RunManager(config["run_dir"],
-               "random").load_checkpoint_if_it_exists(model, checkpoint_path)
+    checkpoint_path = "checkpoints/epoch_1"
+    load_checkpoint(model, "IM-28", checkpoint_path)
 
     predict_on_random_images(model, mini_val_dataset,
                              class_names=class_names, n=5, seed=4200)
+
     # display_random_images(mini_train_dataset,
     #   class_names=class_names, n=5, seed=4)
