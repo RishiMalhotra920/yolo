@@ -1,11 +1,9 @@
 # install with 
 # conda install --file requirements.txt
-pytorch::pytorch
-torchvision
+torch
 torchaudio
 torchinfo
 numpy
 matplotlib
-tensorboard
 tqdm
-mlflow
+neptune

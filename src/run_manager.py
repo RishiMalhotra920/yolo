@@ -20,7 +20,6 @@ class RunManager:
     def __init__(self, run_name: str):
         self.run_id = run_name
         self.temp_dir = Path("temp")
-        print('temp', str(self.temp_dir))
         self.temp_dir.mkdir(exist_ok=True)
 
         self.run = neptune.init_run(
