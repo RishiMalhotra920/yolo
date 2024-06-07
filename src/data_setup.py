@@ -57,7 +57,7 @@ class SubsetImageFolder(BaseDataset):
         return image, label
 
 
-meta = torch.load(config['meta_file_path'])
+meta = torch.load(f'{config["image_net_data_dir"]}/meta.bin')
 
 
 def get_class_names_from_folder_names(classes: list[str]):

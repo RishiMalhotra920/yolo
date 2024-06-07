@@ -129,9 +129,9 @@ if __name__ == "__main__":
                         help='Checkpoint path for the run continue training from')
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
-    parser.add_argument('--train_dir', type=str, default=config["image_net_train_data_path"],
+    parser.add_argument('--train_dir', type=str, default=f'{config["image_net_data_dir"]}/train',
                         help='Directory containing training data')
-    parser.add_argument('--val_dir', type=str, default=config["image_net_val_data_path"],
+    parser.add_argument('--val_dir', type=str, default=f'{config["image_net_data_dir"]}/val',
                         help='Directory containing validation data')
     parser.add_argument('--run_dir', type=str, default=config["run_dir"],
                         help='Directory to store runs')
