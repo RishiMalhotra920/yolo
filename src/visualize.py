@@ -4,10 +4,11 @@ import yaml
 from data_setup import create_mini_datasets, get_class_names_from_folder_names
 from run_manager import load_checkpoint
 import model_builder
+import argparse
 config = yaml.safe_load(open("config.yaml"))
 
 
-if __name__ == "__main__":
+def visualize(args):
 
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
@@ -30,30 +31,35 @@ if __name__ == "__main__":
 
     print('condif', config)
     mini_train_dataset, mini_val_dataset = create_mini_datasets(
-        config["image_net_train_data_path"],
-        config["image_net_val_data_path"],
+        f'{config["image_net_data_dir"]}/train',
+        f'{config["image_net_data_dir"]}/val',
         classes,
         data_transform)
 
-    # display_random_images(mini_train_dataset,
-    #   class_names=class_names, n=5, seed=4)
-
-    # mini_model = RunManager().load_model(
     model = model_builder.TinyVGG(
-        hidden_units=128,
+        hidden_units=args.hidden_units,
         output_shape=len(classes)
     ).to("cpu")
 
-    # run_id = "128_channels"
-    # RunManager(config["run_dir"], run_id).load_model(
-    #     model,
-    #     epoch=29
-    # )
-    checkpoint_path = "checkpoints/epoch_1"
-    load_checkpoint(model, "IM-28", checkpoint_path)
+    load_checkpoint(model, args.run_id, args.checkpoint_path)
 
     predict_on_random_images(model, mini_val_dataset,
-                             class_names=class_names, n=5, seed=4200)
+                             class_names=class_names, n=10, seed=4200)
 
     # display_random_images(mini_train_dataset,
     #   class_names=class_names, n=5, seed=4)
+
+
+if __name__ == "__main__":
+    # for example
+    # python visualize.py --run_name "IM-28" --checkpoint_path checkpoints/epoch_1 --hidden_units 256
+    parser = argparse.ArgumentParser(
+        description="Visualize the model's predictions")
+    parser.add_argument("--hidden_units", type=int,
+                        help="The number of hidden units", required=True)
+    parser.add_argument("--run_id", type=str,
+                        help="The id of the run", required=True)
+    parser.add_argument("--checkpoint_path", type=str,
+                        help="The path to the checkpoint", required=True)
+    args = parser.parse_args()
+    visualize(args)

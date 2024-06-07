@@ -137,7 +137,8 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
 
     # load from temp_dir/{file_name}.pth into model
     file_name = checkpoint_path.split("/")[-1]
-    params = torch.load(temp_dir/f"{file_name}.pth")
+    params = torch.load(temp_dir/f"{file_name}.pth",
+                        map_location=torch.device('cpu'))
     model.load_state_dict(params)
 
     # file_name should be epoch_{epoch}.pth
