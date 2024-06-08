@@ -8,5 +8,6 @@ pascalvoc_data/
 src/config.yaml
 src/.neptune/
 setup.sh
+**/config.yaml
 *.ipynb
 .DS_Store
