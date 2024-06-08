@@ -11,7 +11,8 @@ import yaml
 config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
-# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.001 --run_id trial_run_with_128_hidden_units
+# start with learning rate 0.01 to speed the fuck out of the training. if it starts to bounce around, then we can decrease it.
+# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_id cpu_run_on_image_net
 
 # GPU training command:
 # python train.py --num_epochs 50 --batch_size 128 --hidden_units 256 --learning_rate 0.001 --run_id cuda_run_with_256_hidden_units --device cuda
@@ -29,7 +30,7 @@ def train(args) -> None:
     # Create transforms
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((100, 100)),
+        transforms.Resize((448, 448)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
@@ -46,10 +47,8 @@ def train(args) -> None:
     num_workers = 8
 
     # Create DataLoaders with help from data_setup.py
-    train_dataloader, test_dataloader, class_names = data_setup.create_mini_dataloaders(
-        train_dir=args.train_dir,
-        val_dir=args.val_dir,
-        classes=classes,
+    train_dataloader, test_dataloader = data_setup.create_dataloaders(
+        root_dir=config["image_net_data_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
         num_workers=num_workers
@@ -58,10 +57,7 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = model_builder.TinyVGG(
-        hidden_units=args.hidden_units,
-        output_shape=len(class_names)
-    ).to(args.device)
+    model = model_builder.DeepConvNet().to(args.device)
 
     run_manager = RunManager(args.run_id)
     if args.continue_from_checkpoint_run_id is not None and args.continue_from_checkpoint_path is None:
