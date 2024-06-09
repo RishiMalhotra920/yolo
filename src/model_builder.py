@@ -75,7 +75,7 @@ class DeepConvNet(nn.Module):
         """
         super(DeepConvNet, self).__init__()
         self.block_1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=7, stride=2),
+            nn.Conv2d(3, 64, kernel_size=7, stride=1),  # originally stride 2
             nn.LeakyReLU(negative_slope=0.1),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
@@ -99,22 +99,22 @@ class DeepConvNet(nn.Module):
         )
 
         self.block_4 = nn.Sequential(
-            # nn.Conv2d(512, 256, kernel_size=1),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(256, 512, kernel_size=3),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(512, 256, kernel_size=1),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(256, 512, kernel_size=3),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(512, 256, kernel_size=1),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(256, 512, kernel_size=3),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(512, 256, kernel_size=1),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(256, 512, kernel_size=3),
-            # nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(512, 256, kernel_size=1),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(256, 512, kernel_size=3),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(512, 256, kernel_size=1),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(256, 512, kernel_size=3),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(512, 256, kernel_size=1),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(256, 512, kernel_size=3),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(512, 256, kernel_size=1),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(256, 512, kernel_size=3),
+            nn.LeakyReLU(negative_slope=0.1),
             nn.Conv2d(512, 512, kernel_size=1),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Conv2d(512, 1024, kernel_size=3),
@@ -127,16 +127,17 @@ class DeepConvNet(nn.Module):
             nn.LeakyReLU(negative_slope=0.1),
             nn.Conv2d(512, 1024, kernel_size=3),
             nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(1024, 512, kernel_size=1),
-            # nn.LeakyReLU(negative_slope=0.1),
-            # nn.Conv2d(512, 1024, kernel_size=3),
-            # nn.LeakyReLU(negative_slope=0.1)
+            nn.Conv2d(1024, 512, kernel_size=1),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Conv2d(512, 1024, kernel_size=3),
+            nn.LeakyReLU(negative_slope=0.1)
         )
 
         # adaptive avg pool is used to allow for any input size
         # and output a fixed size tensor
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(1024, 1000)
+        self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
         x = self.block_1(x)
@@ -146,6 +147,7 @@ class DeepConvNet(nn.Module):
         x = self.block_5(x)
         x = self.avg_pool(x)
         x = x.view(x.size(0), -1)  # batch size x 1024
+        x = self.dropout(x)
         x = self.fc(x)
         return x
 
