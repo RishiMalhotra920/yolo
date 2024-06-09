@@ -1,7 +1,6 @@
 import io
 import os
 import torch
-from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
 from typing import Dict, Any
 import matplotlib.pyplot as plt
@@ -64,9 +63,11 @@ class RunManager:
         for key in files:
             self.run[key].upload(files[key])
 
-    def log_metrics(self, metrics: Dict[str, float], epoch: int) -> None:
+    def log_metrics(self, metrics: Dict[str, float], epoch: float) -> None:
         """
         Track metrics for the run and plot it on neptune.
+
+        epoch can be a float - a float epoch denotes that we are logging a fraction of the way through the epoch
 
         Args:
           metrics: a dictionary of metrics to track.

@@ -66,8 +66,6 @@ def train(args) -> None:
     else:
         epoch_start = 0
 
-    checkpoint_interval = 5
-
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(),
@@ -98,7 +96,8 @@ def train(args) -> None:
                  epoch_start=epoch_start,
                  epoch_end=epoch_start + args.num_epochs,
                  run_manager=run_manager,
-                 checkpoint_interval=checkpoint_interval,
+                 checkpoint_interval=args.checkpoint_interval,
+                 log_interval=args.log_interval,
                  device=args.device)
 
     run_manager.end_run()
@@ -122,6 +121,10 @@ if __name__ == "__main__":
     parser.add_argument('--run_id', type=str, required=True,
                         help='Unique identifier for the run')
 
+    parser.add_argument('--log_interval', type=int, default=10,
+                        help='The number of batches to wait before logging training status')
+    parser.add_argument('--checkpoint_interval', type=int, default=1,
+                        help='The number of epochs to wait before saving model checkpoint')
     parser.add_argument('--continue_from_checkpoint_run_id', type=str, default=None,
                         help='Run ID to continue training from')
     parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
