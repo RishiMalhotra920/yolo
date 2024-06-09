@@ -71,7 +71,7 @@ class TinyVGG(nn.Module):
 class DeepConvNet(nn.Module):
     def __init__(self):
         """
-        23M parameters
+        13M parameters
         """
         super(DeepConvNet, self).__init__()
         self.block_1 = nn.Sequential(

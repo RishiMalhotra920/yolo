@@ -17,6 +17,8 @@ config = yaml.safe_load(open("config.yaml"))
 # GPU training command:
 # python train.py --num_epochs 50 --batch_size 128 --hidden_units 256 --learning_rate 0.001 --run_id cuda_run_with_256_hidden_units --device cuda
 
+# python train.py --num_epochs 100 --batch_size 1024 --hidden_units 256 --learning_rate 0.001 --run_id image_net_train_with_logging --device cuda
+
 
 def train(args) -> None:
 
@@ -95,6 +97,7 @@ def train(args) -> None:
                  loss_fn=loss_fn,
                  epoch_start=epoch_start,
                  epoch_end=epoch_start + args.num_epochs,
+                 k_top=5,
                  run_manager=run_manager,
                  checkpoint_interval=args.checkpoint_interval,
                  log_interval=args.log_interval,
