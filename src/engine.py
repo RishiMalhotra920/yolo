@@ -51,9 +51,6 @@ def test_step(model: nn.Module,
               dataloader: DataLoader,
               loss_fn: nn.modules.loss._Loss,
               k_top: int,
-              run_manager: RunManager,
-              log_interval: int,
-              epoch: int,
               device: str) -> dict[str, float]:
 
     model.eval()
@@ -75,10 +72,6 @@ def test_step(model: nn.Module,
             num_correct += utils.count_top_k_correct(
                 test_pred_logits, y, k_top)
             num_predictions += len(y)
-
-            if batch != 0 and batch % log_interval == 0:
-                run_manager.log_metrics({"val/loss": loss.item(),
-                                         "val/accuracy": num_correct / num_predictions}, epoch + batch / len(dataloader))
 
     test_loss = test_loss / len(dataloader)
     top_k_accuracy = num_correct / num_predictions
@@ -122,7 +115,7 @@ def train(model: torch.nn.Module,
         train_step_dict = train_step(
             model, train_dataloader, loss_fn, optimizer, k_top, run_manager, log_interval, epoch, device)
         val_step_dict = test_step(
-            model, val_dataloader, loss_fn, k_top, run_manager, log_interval, epoch, device)
+            model, val_dataloader, loss_fn, k_top, device)
 
         run_manager.log_metrics({"train/loss": train_step_dict["loss"],
                                  "val/loss": val_step_dict["loss"],
