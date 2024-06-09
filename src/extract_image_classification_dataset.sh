@@ -1,5 +1,5 @@
-mkdir dataset
-cd dataset
+mkdir image_net_data
+cd image_net_data
 echo "Curling the train dataset"
 curl --progress-bar -O https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
 echo "Curling the val dataset"

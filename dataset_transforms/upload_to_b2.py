@@ -12,14 +12,15 @@ b2_api.authorize_account("production", application_key_id, application_key)
 
 # File to upload and bucket details
 bucket_name = config["b2_bucket_name"]
-# file_path = '/Users/rishimalhotra/projects/cv/image_classification/image_net_data.tar.gz'
-# file_name = 'image_net_data.tar.gz'
-file_path = '/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train/n01440764/n01440764_18.JPEG'
-file_name = 'n01440764_18.JPEG'
+file_path = '/Users/rishimalhotra/projects/cv/image_classification/image_net_data.tar.gz'
+file_name = 'image_net_data.tar.gz'
+# file_path = '/Users/rishimalhotra/projects/cv/image_classification/image_net_data/train/n01440764/n01440764_18.JPEG'
+# file_name = 'n01440764_18.JPEG'
 
 # Get the bucket
 bucket = b2_api.get_bucket_by_name(bucket_name)
 
+print("uploading file...")
 # Upload file
 b2_file = bucket.upload_local_file(
     local_file=file_path,

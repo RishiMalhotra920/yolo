@@ -17,7 +17,7 @@ config = yaml.safe_load(open("config.yaml"))
 # GPU training command:
 # python train.py --num_epochs 50 --batch_size 128 --hidden_units 256 --learning_rate 0.001 --run_id cuda_run_with_256_hidden_units --device cuda
 
-# python train.py --num_epochs 100 --batch_size 1024 --hidden_units 256 --learning_rate 0.001 --run_id image_net_train_with_logging --device cuda
+# python train.py --num_epochs 100 --batch_size 1024 --hidden_units 256 --learning_rate 0.005 --run_id image_net_train_deeper_network_and_dropout --device cuda
 
 
 def train(args) -> None:
@@ -77,7 +77,6 @@ def train(args) -> None:
         "num_epochs": args.num_epochs,
         "learning_rate": args.learning_rate,
         "batch_size": args.batch_size,
-        "hidden_units": args.hidden_units,
         "loss_fn": "CrossEntropyLoss",
         "optimizer": "Adam",
         "device": args.device,
@@ -117,8 +116,6 @@ if __name__ == "__main__":
                         help='Number of epochs to train the model')
     parser.add_argument('--batch_size', type=int, required=True,
                         help='Batch size for training the model')
-    parser.add_argument('--hidden_units', type=int, required=True,
-                        help='Number of hidden units in the model')
     parser.add_argument('--learning_rate', type=float, required=True,
                         help='Learning rate for the optimizer')
     parser.add_argument('--run_id', type=str, required=True,
