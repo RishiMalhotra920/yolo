@@ -30,7 +30,7 @@ def train(args) -> None:
     # Create transforms
     data_transform = transforms.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((448, 448)),
+        transforms.Resize((224, 224)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(30),
         transforms.ColorJitter(brightness=0.5, contrast=0.5),
