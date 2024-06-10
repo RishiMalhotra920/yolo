@@ -117,6 +117,8 @@ class RunManager:
         # to add more info, do this: epoch_{epoch}_lr_{lr}_bs_{bs}.pth
         # later on you can implement a json file to store info about checkpoints
 
+        # need this here in case temp dir is deleted between run creation and model saving
+        self.temp_dir.mkdir(exist_ok=True)
         model_save_path = self.temp_dir / f"{epoch}.pth"
         print(f"[INFO] Saving model to {model_save_path}")
         torch.save(obj=model.state_dict(), f=model_save_path)
