@@ -31,8 +31,6 @@ class CustomExponentialLR(_LRScheduler):
             return [base_lr * (self.growth_factor ** self.last_epoch) for base_lr in self.base_lrs]
         return [self.final_lr for base_lr in self.base_lrs]
 
-# Create a LambdaLR scheduler
-
 
 def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     """
@@ -44,8 +42,8 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     return scheduler
 
 
-def get_fixed_lr_scheduler(optimizer, lr) -> torch.optim.lr_scheduler.LRScheduler:
-    return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: lr)
+def get_fixed_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
+    return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda _: 1)
 
 
 if __name__ == '__main__':
@@ -53,7 +51,7 @@ if __name__ == '__main__':
     model = torch.nn.Linear(10, 2)
     initial_lr = 0.001
     optimizer = optim.SGD(model.parameters(), lr=initial_lr)
-    scheduler = get_custom_lr_scheduler(optimizer)
+    scheduler = get_fixed_lr_scheduler(optimizer)
 
     # Training loop
     learning_rates = []

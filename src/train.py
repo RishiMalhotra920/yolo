@@ -13,12 +13,12 @@ config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
 # start with learning rate 0.01 to speed the fuck out of the training. if it starts to bounce around, then we can decrease it.
-# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_id cpu_run_on_image_net
+# python train.py --num_epochs 10 --batch_size 32 --hidden_units 128 --learning_rate 0.01 --run_name cpu_run_on_image_net
 
 # GPU training command:
-# python train.py --num_epochs 50 --batch_size 128 --hidden_units 256 --learning_rate 0.001 --run_id cuda_run_with_256_hidden_units --device cuda
+# python train.py --num_epochs 50 --batch_size 128 --hidden_units 256 --learning_rate 0.001 --run_name cuda_run_with_256_hidden_units --device cuda
 
-# python train.py --num_epochs 100 --batch_size 1024 --hidden_units 256 --learning_rate 0.005 --run_id image_net_train_deeper_network_and_dropout --device cuda
+# python train.py --num_epochs 100 --batch_size 1024 --hidden_units 256 --learning_rate 0.005 --run_name image_net_train_deeper_network_and_dropout --device cuda
 
 
 def train(args) -> None:
@@ -43,8 +43,6 @@ def train(args) -> None:
         # transforms.RandomErasing()
     ])
 
-    classes = ["n01986214", "n02009912", "n01924916"]
-
     # cpu_count = os.cpu_count()
     # num_workers = cpu_count if cpu_count is not None else 0
     num_workers = 8
@@ -62,23 +60,31 @@ def train(args) -> None:
     # Create model with help from model_builder.py
     model = model_builder.DeepConvNet().to(args.device)
 
-    run_manager = RunManager(args.run_id)
-    if args.continue_from_checkpoint_run_id is not None and args.continue_from_checkpoint_path is None:
-        epoch_start = load_checkpoint(
-            model, run_id=args.continue_from_checkpoint_run_id, checkpoint_path=args.continue_from_checkpoint_path)
+    # if continue_from_checkpoint_run_id is provided but continue_from_checkpoint_path is not, start with a fresh model but continue logging to existing run
+    # if continue_from_checkpoint_run_id and continue_from_checkpoint_path are provided, load the model from the checkpoint and continue logging to existing run
+    if args.continue_from_checkpoint_run_id is not None:
+        run_manager = RunManager(
+            args.run_name, run_id=args.continue_from_checkpoint_run_id, should_load_run=True)
+        if args.continue_from_checkpoint_path is not None:
+            print('')
+            epoch_start = load_checkpoint(
+                model, run_id=args.continue_from_checkpoint_run_id, checkpoint_path=args.continue_from_checkpoint_path)
+        else:
+            epoch_start = 0
     else:
         epoch_start = 0
+        run_manager = RunManager(args.run_name, should_load_run=False)
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
 
     optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=0.001)
+                                 lr=args.lr)
 
     if args.lr_scheduler == "custom":
         lr_scheduler = get_custom_lr_scheduler(optimizer)
     else:
-        lr_scheduler = get_fixed_lr_scheduler(optimizer, lr=float(args.lr))
+        lr_scheduler = get_fixed_lr_scheduler(optimizer)
 
     parameters = {
         "num_epochs": args.num_epochs,
@@ -127,17 +133,21 @@ if __name__ == "__main__":
                         help='Batch size for training the model')
     parser.add_argument('--lr_scheduler', type=str, required=True,
                         help='Scheduler for the optimizer or custom')
-    parser.add_argument('--run_id', type=str, required=True,
-                        help='Unique identifier for the run')
+    parser.add_argument('--lr', type=float, required=True,
+                        help='Learning rate for fixed scheduler or starting learning rate for custom scheduler')
 
-    parser.add_argument('--log_interval', type=int, default=10,
-                        help='The number of batches to wait before logging training status')
+    parser.add_argument('--run_name', type=str, required=False,
+                        help='A name for the run')
     parser.add_argument('--checkpoint_interval', type=int, default=1,
                         help='The number of epochs to wait before saving model checkpoint')
     parser.add_argument('--continue_from_checkpoint_run_id', type=str, default=None,
                         help='Run ID to continue training from')
     parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
                         help='Checkpoint path for the run continue training from')
+
+    parser.add_argument('--log_interval', type=int, default=10,
+                        help='The number of batches to wait before logging training status')
+
     parser.add_argument('--device', type=str, default="cpu",
                         help='Device to train the model on')
     parser.add_argument('--train_dir', type=str, default=f'{config["image_net_data_dir"]}/train',
@@ -149,13 +159,22 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    assert args.run_name is not None or args.continue_from_checkpoint_run_id is not None, "Please provide a run_name or continue_from_checkpoint_run_id"
+    assert args.lr_scheduler in ["custom", "fixed"], "Invalid lr_scheduler"
+    assert args.lr_scheduler == "fixed" and args.lr is not None, "Please provide a learning rate"
+
     try:
-        inp = input(f"Confirm that run_id is {args.run_id}: yes or no: ")
+        if args.run_name is None:
+            inp = input(
+                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}/{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: ")
+        else:
+            inp = input(
+                f"Confirm that run_name is {args.run_name}: yes or no: ")
 
         if inp.lower() != "yes":
             raise Exception("Type yes on input...")
 
-        print("Starting training for run_id:", args.run_id)
+        print("Starting training for run_name:", args.run_name)
         train(args)
 
     except KeyboardInterrupt:

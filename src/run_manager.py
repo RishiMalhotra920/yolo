@@ -16,16 +16,24 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, run_name: str):
+    def __init__(self, run_name: str, *, run_id: str | None = None, should_load_run: bool = False):
         self.run_id = run_name
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
 
-        self.run = neptune.init_run(
-            project="towards-hi/image-classification",
-            api_token=config["neptune_api_token"],
-            name=run_name
-        )
+        if should_load_run:
+            assert run_id is not None, "run_id should not be None if should_load_run is True"
+            self.run = neptune.init_run(
+                project="towards-hi/image-classification",
+                api_token=config["neptune_api_token"],
+                with_id=run_id,
+            )
+        else:
+            self.run = neptune.init_run(
+                project="towards-hi/image-classification",
+                api_token=config["neptune_api_token"],
+                name=run_name
+            )
 
     def log_data(self, data: Dict[str, Any]) -> None:
         """
