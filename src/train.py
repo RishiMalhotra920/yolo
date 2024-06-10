@@ -1,3 +1,4 @@
+from lr_scheduler import get_custom_lr_scheduler, get_fixed_lr_scheduler
 from run_manager import RunManager, load_checkpoint
 
 import argparse
@@ -70,12 +71,18 @@ def train(args) -> None:
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
+
     optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=args.learning_rate)
+                                 lr=0.001)
+
+    if args.lr_scheduler == "custom":
+        lr_scheduler = get_custom_lr_scheduler(optimizer)
+    else:
+        lr_scheduler = get_fixed_lr_scheduler(optimizer, lr=float(args.lr))
 
     parameters = {
         "num_epochs": args.num_epochs,
-        "learning_rate": args.learning_rate,
+        "lr_scheduler": args.lr_scheduler,
         "batch_size": args.batch_size,
         "loss_fn": "CrossEntropyLoss",
         "optimizer": "Adam",
@@ -86,12 +93,14 @@ def train(args) -> None:
                           "model/summary": str(model),
                           })
 
-    run_manager.log_files({"model/code": "model_builder.py"
+    run_manager.log_files({"model/code": "model_builder.py",
+                           "lr_scheduler/code": "lr_scheduler.py",
                            })
 
     engine.train(model=model,
                  train_dataloader=train_dataloader,
                  val_dataloader=test_dataloader,
+                 lr_scheduler=lr_scheduler,
                  optimizer=optimizer,
                  loss_fn=loss_fn,
                  epoch_start=epoch_start,
@@ -116,8 +125,8 @@ if __name__ == "__main__":
                         help='Number of epochs to train the model')
     parser.add_argument('--batch_size', type=int, required=True,
                         help='Batch size for training the model')
-    parser.add_argument('--learning_rate', type=float, required=True,
-                        help='Learning rate for the optimizer')
+    parser.add_argument('--lr_scheduler', type=str, required=True,
+                        help='Scheduler for the optimizer or custom')
     parser.add_argument('--run_id', type=str, required=True,
                         help='Unique identifier for the run')
 

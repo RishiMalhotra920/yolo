@@ -82,7 +82,8 @@ def test_step(model: nn.Module,
 def train(model: torch.nn.Module,
           train_dataloader: DataLoader,
           val_dataloader: DataLoader,
-          optimizer: Optimizer,
+          lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
+          optimizer: torch.optim.Optimizer,
           loss_fn: nn.modules.loss._Loss,
           epoch_start: int,
           epoch_end: int,
@@ -98,6 +99,7 @@ def train(model: torch.nn.Module,
         model: A PyTorch model to train.
         train_dataloader: A PyTorch DataLoader for training data.
         val_dataloader: A PyTorch DataLoader for validation data.
+        lr_scheduler: A PyTorch learning rate scheduler.
         optimizer: A PyTorch optimizer to use for training.
         loss_fn: A PyTorch loss function to use for training.
         epoch_start: The starting epoch for training.
@@ -120,7 +122,11 @@ def train(model: torch.nn.Module,
         run_manager.log_metrics({"train/loss": train_step_dict["loss"],
                                  "val/loss": val_step_dict["loss"],
                                  "train/accuracy": train_step_dict["top_k_accuracy"],
-                                 "val/accuracy": val_step_dict["top_k_accuracy"]}, epoch+1)
+                                 "val/accuracy": val_step_dict["top_k_accuracy"],
+                                 "learning_rate": optimizer.param_groups[0]["lr"]
+                                 }, epoch+1)
 
         if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)
+
+        lr_scheduler.step()
