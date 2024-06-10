@@ -64,16 +64,16 @@ def train(args) -> None:
     # if continue_from_checkpoint_run_id and continue_from_checkpoint_path are provided, load the model from the checkpoint and continue logging to existing run
     if args.continue_from_checkpoint_run_id is not None:
         run_manager = RunManager(
-            args.run_name, run_id=args.continue_from_checkpoint_run_id, should_load_run=True)
+            load_from_run_id=args.continue_from_checkpoint_run_id, should_load_run=True)
         if args.continue_from_checkpoint_path is not None:
-            print('')
             epoch_start = load_checkpoint(
                 model, run_id=args.continue_from_checkpoint_run_id, checkpoint_path=args.continue_from_checkpoint_path)
         else:
             epoch_start = 0
     else:
         epoch_start = 0
-        run_manager = RunManager(args.run_name, should_load_run=False)
+        run_manager = RunManager(
+            new_run_name=args.run_name, should_load_run=False)
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     try:
         if args.run_name is None:
             inp = input(
-                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}/{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: ")
+                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}:{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: ")
         else:
             inp = input(
                 f"Confirm that run_name is {args.run_name}: yes or no: ")
