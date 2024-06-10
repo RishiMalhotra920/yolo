@@ -166,4 +166,4 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     except Exception as e:
         print(f"Failed to remove directory: {e}")
 
-    return epoch_number
+    return start_epoch
