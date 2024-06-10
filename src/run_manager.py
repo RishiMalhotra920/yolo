@@ -155,6 +155,10 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     # file_name should be epoch_{epoch}.pth
     epoch_number = int(file_name.split("_")[1])
 
+    # we save logs for the epoch number that was completed
+    # we should start logging from the next epoch
+    start_epoch = epoch_number + 1
+
     print('this is epoch_number', epoch_number)
 
     try:

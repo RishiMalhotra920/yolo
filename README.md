@@ -17,6 +17,6 @@ python train.py --num_epochs 10 --batch_size 4 --lr_scheduler fixed --lr 0.01 --
 ## To continue training on gpu test
 
 ```
-python train.py --num_epochs 100 --batch_size 512 --lr_scheduler fixed --lr 0.001 --continue_from_checkpoint_run_id IM-50 --continue_from_checkpoint_path checkpoints/epoch_5
-python train.py --num_epochs 10 --batch_size 32 --lr_scheduler fixed --lr 0.001 --continue_from_checkpoint_run_id IM-50 --continue_from_checkpoint_path checkpoints/epoch_5
+python train.py --num_epochs 100 --batch_size 512 --lr_scheduler fixed --lr 0.001 --continue_from_checkpoint_run_id IM-50 --continue_from_checkpoint_path checkpoints/epoch_5 --device cuda
+python train.py --num_epochs 10 --batch_size 32 --lr_scheduler fixed --lr 0.001 --continue_from_checkpoint_run_id IM-50 --continue_from_checkpoint_path checkpoints/epoch_5 --device cuda
 ```
