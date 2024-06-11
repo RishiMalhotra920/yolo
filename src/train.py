@@ -164,7 +164,6 @@ if __name__ == "__main__":
 
     assert args.run_name is not None or args.continue_from_checkpoint_run_id is not None, "Please provide a run_name or continue_from_checkpoint_run_id"
     assert args.lr_scheduler in ["custom", "fixed"], "Invalid lr_scheduler"
-    assert args.lr_scheduler == "fixed" and args.lr is not None, "Please provide a learning rate"
 
     try:
         if args.run_name is None:
