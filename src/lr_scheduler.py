@@ -38,7 +38,7 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     and then keeps it constant at 0.01 for the remaining epochs.
     """
     scheduler = CustomExponentialLR(
-        optimizer, init_lr=0.001, final_lr=0.01, growth_epochs=10)
+        optimizer, init_lr=0.001, final_lr=0.005, growth_epochs=10)
     return scheduler
 
 
@@ -51,7 +51,8 @@ if __name__ == '__main__':
     model = torch.nn.Linear(10, 2)
     initial_lr = 0.001
     optimizer = optim.SGD(model.parameters(), lr=initial_lr)
-    scheduler = get_fixed_lr_scheduler(optimizer)
+    # scheduler = get_fixed_lr_scheduler(optimizer)
+    scheduler = get_custom_lr_scheduler(optimizer)
 
     # Training loop
     learning_rates = []
