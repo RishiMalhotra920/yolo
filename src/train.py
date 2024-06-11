@@ -58,7 +58,7 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = model_builder.DeepConvNet().to(args.device)
+    model = model_builder.DeepConvNet(dropout=args.dropout).to(args.device)
 
     # if continue_from_checkpoint_run_id is provided but continue_from_checkpoint_path is not, start with a fresh model but continue logging to existing run
     # if continue_from_checkpoint_run_id and continue_from_checkpoint_path are provided, load the model from the checkpoint and continue logging to existing run
@@ -135,6 +135,8 @@ if __name__ == "__main__":
                         help='Scheduler for the optimizer or custom')
     parser.add_argument('--lr', type=float, required=True,
                         help='Learning rate for fixed scheduler or starting learning rate for custom scheduler')
+    parser.add_argument('--dropout', type=float, required=True,
+                        help='Dropout rate for the model')
 
     parser.add_argument('--run_name', type=str, required=False,
                         help='A name for the run')

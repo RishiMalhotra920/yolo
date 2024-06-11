@@ -38,7 +38,7 @@ def visualize(args):
     # output_shape=len(classes)
     # ).to("cpu")
 
-    model = model_builder.DeepConvNet().to("cpu")
+    model = model_builder.DeepConvNet(dropout=0).to("cpu")
 
     load_checkpoint(model, args.run_id, args.checkpoint_path)
 

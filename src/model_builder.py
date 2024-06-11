@@ -69,7 +69,7 @@ class TinyVGG(nn.Module):
 
 
 class DeepConvNet(nn.Module):
-    def __init__(self):
+    def __init__(self, dropout):
         """
         13M parameters
         """
@@ -137,7 +137,7 @@ class DeepConvNet(nn.Module):
         # and output a fixed size tensor
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(1024, 1000)
-        self.dropout = nn.Dropout(p=0.5)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x):
         x = self.block_1(x)
@@ -157,6 +157,6 @@ if __name__ == "__main__":
 
     # print(summary(model))
     # print('-------')
-    model = DeepConvNet()
+    model = DeepConvNet(dropout=0)
     # print(summary(model))
     summary(model, (1, 3, 224, 224))
