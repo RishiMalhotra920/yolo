@@ -93,6 +93,7 @@ def train(args) -> None:
         "loss_fn": "CrossEntropyLoss",
         "optimizer": "Adam",
         "device": args.device,
+        "dropout": args.dropout,
     }
 
     run_manager.log_data({"parameters": parameters,
