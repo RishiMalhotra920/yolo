@@ -87,7 +87,7 @@ def train(args) -> None:
         print("epoch", epoch, "lr", optimizer.param_groups[0]['lr'])
 
     print('this is lr_scheduler current lr', optimizer.param_groups[0]['lr'])
-    input()
+    # input()
 
     parameters = {
         "num_epochs": args.num_epochs,
