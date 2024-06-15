@@ -57,6 +57,8 @@ def train(args) -> None:
     # input()
 
     model = model_builder.DeepConvNet(dropout=args.dropout).to(args.device)
+    if args.device == "cuda":
+        model = torch.nn.DataParallel(model)
 
     run_manager = RunManager(new_run_name=args.run_name)
     if args.continue_from_checkpoint_signature is not None:
