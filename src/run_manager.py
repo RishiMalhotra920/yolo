@@ -1,13 +1,15 @@
 import io
 import os
-import torch
-from pathlib import Path
-from typing import Dict, Any
-import matplotlib.pyplot as plt
-import PIL.Image as Image
-import neptune
-import yaml
 import shutil
+from pathlib import Path
+from typing import Any, Dict
+
+import matplotlib.pyplot as plt
+import neptune
+import PIL.Image as Image
+import torch
+import yaml
+
 config = yaml.safe_load(open("config.yaml"))
 
 
@@ -16,26 +18,40 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, should_load_run: bool):
+    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, tags: list[str] = []):
 
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
 
-        if should_load_run:
-            assert load_from_run_id is not None, "run_id should not be None if should_load_run is True"
-            print(f"Loading run with id: {load_from_run_id}")
-            self.run = neptune.init_run(
-                project="towards-hi/image-classification",
-                api_token=config["neptune_api_token"],
-                with_id=load_from_run_id,
-            )
-        else:
-            assert new_run_name is not None, "new_run_name should not be None if should_load_run is False"
-            self.run = neptune.init_run(
-                project="towards-hi/image-classification",
-                api_token=config["neptune_api_token"],
-                name=new_run_name
-            )
+        assert new_run_name is not None, "new_run_name should not be None"
+        self.run = neptune.init_run(
+            project="towards-hi/image-classification",
+            api_token=config["neptune_api_token"],
+            name=new_run_name,
+            tags=tags
+        )
+
+    def add_tags(self, tags: list[str]) -> None:
+        """
+        Add tags to the run.
+
+        Args:
+          tags: a list of tags to add to the run.
+
+        Example:
+          tags = ["resnet", "cifar10"]
+        """
+        self.run["sys/tags"].add(tags)
+
+    def set_checkpoint_to_continue_from(self, checkpoint_to_continue_from_signature: str) -> None:
+        """
+        Set the checkpoint to continue from.
+
+        Args:
+          checkpoint_to_continue_from_signature: a string in the format RunId:CheckpointPath
+        """
+        self.log_data(
+            {"checkpoint_to_continue_from_signature": checkpoint_to_continue_from_signature})
 
     def log_data(self, data: Dict[str, Any]) -> None:
         """
@@ -125,7 +141,7 @@ class RunManager:
         self.run[f"checkpoints/epoch_{epoch}"].upload(str(model_save_path))
 
 
-def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -> int:
+def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
     """
     Loads a PyTorch model weights from a run at an epoch.
     Args:
@@ -135,6 +151,8 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     Example usage:
         load_model(model=model_0, epoch=5)
     """
+    assert ":" in checkpoint_signature, "checkpoint_signature should be in the format RunId:CheckpointPath"
+    run_id, checkpoint_path = checkpoint_signature.split(":")
     assert not checkpoint_path.endswith(
         ".pth"), "checkpoint_path should not end with .pth"
 

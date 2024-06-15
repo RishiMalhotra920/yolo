@@ -1,11 +1,12 @@
-from tqdm import tqdm
-from typing import Dict, Any, Optional
-from run_manager import RunManager
-import utils
+from typing import Any, Dict, Optional
+
 import torch
+import utils
+from run_manager import RunManager
 from torch import nn
-from torch.utils.data import DataLoader
 from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 
 def train_step(model: nn.Module,
@@ -126,6 +127,7 @@ def train(model: torch.nn.Module,
                                  "learning_rate": optimizer.param_groups[0]["lr"]
                                  }, epoch+1)
 
+        # saves model/epoch_5 at the end of epoch 5. epochs are 0 indexed.
         if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)
 

@@ -1,14 +1,15 @@
-from lr_scheduler import get_custom_lr_scheduler, get_fixed_lr_scheduler
-from run_manager import RunManager, load_checkpoint
-
 import argparse
 import os
-import torch
+
 import data_setup
 import engine
 import model_builder
-from torchvision import transforms
+import torch
 import yaml
+from lr_scheduler import get_custom_lr_scheduler, get_fixed_lr_scheduler
+from run_manager import RunManager, load_checkpoint
+from torchvision import transforms
+
 config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
@@ -43,11 +44,9 @@ def train(args) -> None:
         # transforms.RandomErasing()
     ])
 
-    # cpu_count = os.cpu_count()
-    # num_workers = cpu_count if cpu_count is not None else 0
-    num_workers = 8
+    cpu_count = os.cpu_count()
+    num_workers = cpu_count if cpu_count is not None else 0
 
-    # Create DataLoaders with help from data_setup.py
     train_dataloader, test_dataloader = data_setup.create_dataloaders(
         root_dir=config["image_net_data_dir"],
         transform=data_transform,
@@ -57,23 +56,19 @@ def train(args) -> None:
     # print('input data shape is', next(iter(train_dataloader))[0].shape)
     # input()
 
-    # Create model with help from model_builder.py
     model = model_builder.DeepConvNet(dropout=args.dropout).to(args.device)
 
-    # if continue_from_checkpoint_run_id is provided but continue_from_checkpoint_path is not, start with a fresh model but continue logging to existing run
-    # if continue_from_checkpoint_run_id and continue_from_checkpoint_path are provided, load the model from the checkpoint and continue logging to existing run
-    if args.continue_from_checkpoint_run_id is not None:
-        run_manager = RunManager(
-            load_from_run_id=args.continue_from_checkpoint_run_id, should_load_run=True)
-        if args.continue_from_checkpoint_path is not None:
-            epoch_start = load_checkpoint(
-                model, run_id=args.continue_from_checkpoint_run_id, checkpoint_path=args.continue_from_checkpoint_path)
-        else:
-            epoch_start = 0
+    run_manager = RunManager(new_run_name=args.run_name)
+    if args.continue_from_checkpoint_signature is not None:
+        epoch_start = load_checkpoint(
+            model, checkpoint_signature=args.continue_from_checkpoint_signature)
+        run_manager.add_tags(
+            ["run_continuation"])
+        run_manager.set_checkpoint_to_continue_from(
+            args.continue_from_checkpoint_signature)
     else:
         epoch_start = 0
-        run_manager = RunManager(
-            new_run_name=args.run_name, should_load_run=False)
+        run_manager.add_tags(["new_run"])
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -85,6 +80,14 @@ def train(args) -> None:
         lr_scheduler = get_custom_lr_scheduler(optimizer)
     else:
         lr_scheduler = get_fixed_lr_scheduler(optimizer)
+
+    for epoch in range(epoch_start):
+        # step the lr_scheduler to match with the current_epoch
+        lr_scheduler.step()
+        print("epoch", epoch, "lr", optimizer.param_groups[0]['lr'])
+
+    print('this is lr_scheduler current lr', optimizer.param_groups[0]['lr'])
+    input()
 
     parameters = {
         "num_epochs": args.num_epochs,
@@ -138,15 +141,15 @@ if __name__ == "__main__":
                         help='Learning rate for fixed scheduler or starting learning rate for custom scheduler')
     parser.add_argument('--dropout', type=float, required=True,
                         help='Dropout rate for the model')
+    # parser.add_argument('--num_workers', type=int, required=True,
+    # help='Number of workers for the dataloader. Eight for your macbook. Number of cores for your gpu')
 
     parser.add_argument('--run_name', type=str, required=False,
                         help='A name for the run')
     parser.add_argument('--checkpoint_interval', type=int, default=1,
                         help='The number of epochs to wait before saving model checkpoint')
-    parser.add_argument('--continue_from_checkpoint_run_id', type=str, default=None,
-                        help='Run ID to continue training from')
-    parser.add_argument('--continue_from_checkpoint_path', type=str, default=None,
-                        help='Checkpoint path for the run continue training from')
+    parser.add_argument('--continue_from_checkpoint_signature', type=str, default=None,
+                        help='Checkpoint signature for the run continue training from in the format: RunId:CheckpointPath eg: IM-23:checkpoints/epoch_10.pth')
 
     parser.add_argument('--log_interval', type=int, default=10,
                         help='The number of batches to wait before logging training status')
@@ -157,12 +160,11 @@ if __name__ == "__main__":
                         help='Directory containing training data')
     parser.add_argument('--val_dir', type=str, default=f'{config["image_net_data_dir"]}/val',
                         help='Directory containing validation data')
-    # parser.add_argument('--run_dir', type=str, default=config["run_dir"],
-    # help='Directory to store runs')
 
     args = parser.parse_args()
 
-    assert args.run_name is not None or args.continue_from_checkpoint_run_id is not None, "Please provide a run_name or continue_from_checkpoint_run_id"
+    # must have a run_name for all runs
+    assert args.run_name is not None
     assert args.lr_scheduler in ["custom", "fixed"], "Invalid lr_scheduler"
 
     try:

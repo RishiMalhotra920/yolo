@@ -1,14 +1,11 @@
-from torch.optim.lr_scheduler import SequentialLR, ExponentialLR, ConstantLR
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.optim as optim
-import matplotlib.pyplot as plt
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import (ConstantLR, ExponentialLR, LambdaLR,
+                                      SequentialLR, _LRScheduler)
 
 # Define the custom learning rate schedule
-
-
-import torch
-from torch.optim.lr_scheduler import _LRScheduler
 
 
 class CustomExponentialLR(_LRScheduler):
@@ -17,18 +14,29 @@ class CustomExponentialLR(_LRScheduler):
     and then keeps it constant at 0.01 for the remaining epochs.
     """
 
-    def __init__(self, optimizer, init_lr, final_lr, growth_epochs, last_epoch=-1):
+    def __init__(self, optimizer, init_lr, final_growth_lr, growth_epochs, decay_epochs, floor_lr, last_epoch=-1):
         self.init_lr = init_lr
-        self.final_lr = final_lr
+        self.final_lr = final_growth_lr
         self.growth_epochs = growth_epochs
-        self.growth_factor = (final_lr / init_lr) ** (1 / growth_epochs)
+        self.decay_epochs = decay_epochs
+        self.growth_factor = (final_growth_lr / init_lr) ** (1 / growth_epochs)
+        self.floor_lr = floor_lr
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
         # self.base_lrs stores the learning rate for each group in the optimizer.
         # self.last_epoch is the last epoch. it is updated by the base class.
+        print(self.last_epoch)
         if self.last_epoch < self.growth_epochs:
             return [base_lr * (self.growth_factor ** self.last_epoch) for base_lr in self.base_lrs]
+        elif self.last_epoch < self.growth_epochs + self.decay_epochs:
+            print("Decay", self.last_epoch, self.growth_epochs,
+                  self.final_lr ** (self.last_epoch - self.growth_epochs))
+            exp_lr = self.final_lr * \
+                np.exp(-0.5 * (self.last_epoch - self.growth_epochs))
+            exp_lr_with_floor = max(exp_lr, self.floor_lr)
+            return [exp_lr_with_floor for base_lr in self.base_lrs]
+
         return [self.final_lr for base_lr in self.base_lrs]
 
 
@@ -38,7 +46,7 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     and then keeps it constant at 0.01 for the remaining epochs.
     """
     scheduler = CustomExponentialLR(
-        optimizer, init_lr=0.001, final_lr=0.005, growth_epochs=10)
+        optimizer, init_lr=0.001, final_growth_lr=0.0016, growth_epochs=5, decay_epochs=20, floor_lr=0.0001)
     return scheduler
 
 
@@ -70,8 +78,23 @@ if __name__ == '__main__':
         # Print learning rate
         learning_rates.append(scheduler.get_last_lr()[0])
 
-    plt.plot(learning_rates)
+    plt.figure(figsize=(20, 10))
+    plt.plot(learning_rates, marker='o')  # 'o' marker to show points
+
+    # Setting x-ticks to only integers
+    # Assuming the epochs are the indices of the list
+    plt.xticks(range(len(learning_rates)))
+
+    # Annotating y-values on the line
+    for i, lr in enumerate(learning_rates):
+        plt.annotate(f'{lr:.5f}',  # Formatting to 3 decimal places
+                     (i, lr),
+                     textcoords="offset points",  # Positioning text
+                     xytext=(0, 10),  # Distance from text to points (x,y)
+                     ha='center')  # Horizontal alignment can be left, right or center
+
     plt.xlabel("Epoch")
     plt.ylabel("Learning Rate")
     plt.title("Custom Exponential Learning Rate Scheduler")
+    plt.grid(True)  # Optional: adds a grid
     plt.show()

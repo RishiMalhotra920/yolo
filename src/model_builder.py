@@ -1,6 +1,6 @@
-from torchinfo import summary
 import torch
 import torch.nn as nn
+from torchinfo import summary
 
 
 class TinyVGG(nn.Module):

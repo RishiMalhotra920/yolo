@@ -1,6 +1,7 @@
-from typing import Optional
-from pathlib import Path
 import random
+from pathlib import Path
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import torch
 
