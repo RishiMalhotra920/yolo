@@ -90,8 +90,6 @@ def train(args) -> None:
         print("epoch", epoch, "lr", optimizer.param_groups[0]['lr'])
 
     print('this is lr_scheduler current lr', optimizer.param_groups[0]['lr'])
-    run_manager.log_metrics(
-        {"learning_rate": optimizer.param_groups[0]['lr']}, epoch_start)
     # input()
 
     parameters = {
