@@ -1,14 +1,15 @@
 import argparse
 import os
 
-import data_setup
-import engine
-import model_builder
 import torch
 import yaml
-from lr_scheduler import get_custom_lr_scheduler, get_fixed_lr_scheduler
+from data_setup import yolo_pretrain_data_setup
+from lr_schedulers.yolo_pretrain_lr_scheduler import (get_custom_lr_scheduler,
+                                                      get_fixed_lr_scheduler)
+from models import yolo_pretrain_net
 from run_manager import RunManager, load_checkpoint
 from torchvision import transforms
+from trainers import yolo_pretrainer
 
 config = yaml.safe_load(open("config.yaml"))
 
@@ -47,7 +48,8 @@ def train(args) -> None:
     cpu_count = os.cpu_count()
     num_workers = cpu_count if cpu_count is not None else 0
 
-    train_dataloader, test_dataloader = data_setup.create_dataloaders(
+    # Create DataLoaders with help from data_setup.py
+    train_dataloader, test_dataloader = yolo_pretrain_data_setup.create_dataloaders(
         root_dir=config["image_net_data_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
@@ -56,9 +58,12 @@ def train(args) -> None:
     # print('input data shape is', next(iter(train_dataloader))[0].shape)
     # input()
 
-    model = model_builder.DeepConvNet(dropout=args.dropout).to(args.device)
+    # Create model with help from model_builder.py
+    model = yolo_pretrain_net.IncompleteYoloPretrainConvNet(
+        dropout=args.dropout).to(args.device)
 
-    run_manager = RunManager(new_run_name=args.run_name)
+    run_manager = RunManager(new_run_name=args.run_name, source_files=[
+                             "lr_schedulers/*.py", "models/*.py", "trainers/*.py", "pretrain_yolo.py"])
     if args.continue_from_checkpoint_signature is not None:
         epoch_start = load_checkpoint(
             model, checkpoint_signature=args.continue_from_checkpoint_signature)
@@ -68,6 +73,7 @@ def train(args) -> None:
             args.continue_from_checkpoint_signature)
     else:
         epoch_start = 0
+
         run_manager.add_tags(["new_run"])
 
     if args.device == "cuda":
@@ -102,27 +108,21 @@ def train(args) -> None:
         "dropout": args.dropout,
     }
 
-    run_manager.log_data({"parameters": parameters,
-                          "model/summary": str(model),
-                          })
+    input()
 
-    run_manager.log_files({"model/code": "model_builder.py",
-                           "lr_scheduler/code": "lr_scheduler.py",
-                           })
-
-    engine.train(model=model,
-                 train_dataloader=train_dataloader,
-                 val_dataloader=test_dataloader,
-                 lr_scheduler=lr_scheduler,
-                 optimizer=optimizer,
-                 loss_fn=loss_fn,
-                 epoch_start=epoch_start,
-                 epoch_end=epoch_start + args.num_epochs,
-                 k_top=5,
-                 run_manager=run_manager,
-                 checkpoint_interval=args.checkpoint_interval,
-                 log_interval=args.log_interval,
-                 device=args.device)
+    yolo_pretrainer.train(model=model,
+                          train_dataloader=train_dataloader,
+                          val_dataloader=test_dataloader,
+                          lr_scheduler=lr_scheduler,
+                          optimizer=optimizer,
+                          loss_fn=loss_fn,
+                          epoch_start=epoch_start,
+                          epoch_end=epoch_start + args.num_epochs,
+                          k_top=5,
+                          run_manager=run_manager,
+                          checkpoint_interval=args.checkpoint_interval,
+                          log_interval=args.log_interval,
+                          device=args.device)
 
     run_manager.end_run()
 

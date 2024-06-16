@@ -18,7 +18,7 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, tags: list[str] = []):
+    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, tags: list[str] = [], source_files: list[str] = []):
 
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
@@ -28,6 +28,7 @@ class RunManager:
             project="towards-hi/image-classification",
             api_token=config["neptune_api_token"],
             name=new_run_name,
+            source_files=source_files,
             tags=tags
         )
 
@@ -73,6 +74,25 @@ class RunManager:
         """
         for key in data:
             self.run[key] = data[key]
+
+    def log_filesets(self, fileset_map: Dict[str, list[str]]) -> None:
+        """
+        Log filesets to the run.
+
+        Args:
+          filesets: a dictionary of filesets to log.
+
+        Example:
+          filesets = {
+            "model": ["model_builder.py", "model_trainer.py"],
+            "data": ["data_loader.py", "models/*.py", "data_loaders"]
+          }
+          you can use wildcards to upload all files in a directory
+          or directory names!
+        """
+
+        for fileset_name in fileset_map:
+            self.run[fileset_name].upload_files(fileset_map[fileset_name])
 
     def log_files(self, files: Dict[str, str]) -> None:
         """
