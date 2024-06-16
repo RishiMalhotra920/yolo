@@ -100,11 +100,21 @@ class YOLONet(nn.Module):
         x = self.block_5(x)
         x = self.block_5_part_2(x)
         x = self.block_6(x)
-        # x = x.view(x.size(0), -1)
-        # x = self.fc1(x)
-        # x = self.dropout(x)
-        # x = self.fc2(x)
-        # x = x.view(-1, 7, 7, 30)
+        x = x.view(x.size(0), -1)
+        x = self.fc1(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+        x = x.view(-1, 7, 7, 30)
+
+        # 30 units =>
+        # [0 .. 2]: bbox_1_x, bbox_2_x
+        # [3 .. 4]: bbox_1_y, bbox_2_y
+        # [5 .. 6]: bbox_1_w, bbox_2_w
+        # [7 .. 8]: bbox_1_h, bbox_2_h
+        # [9]: bbox_1_confidence
+        # [10]: bbox_2_confidence
+        # [11 .. 30]: class probabilities
+
         return x
 
 
