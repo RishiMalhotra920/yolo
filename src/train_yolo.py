@@ -3,10 +3,10 @@ import os
 
 import torch
 import yaml
-from data_setup import yolo_pretrain_data_setup
+from data_setup import yolo_train_data_setup
 from lr_schedulers.yolo_pretrain_lr_scheduler import (get_custom_lr_scheduler,
                                                       get_fixed_lr_scheduler)
-from models import yolo_pretrain_net
+from models import yolo_net
 from run_manager import RunManager, load_checkpoint
 from torchvision import transforms
 from trainers import yolo_pretrainer
@@ -49,7 +49,7 @@ def train(args) -> None:
     num_workers = cpu_count if cpu_count is not None else 0
 
     # Create DataLoaders with help from data_setup.py
-    train_dataloader, test_dataloader = yolo_pretrain_data_setup.create_dataloaders(
+    train_dataloader, test_dataloader = yolo_train_data_setup.create_dataloaders(
         root_dir=config["image_net_data_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
@@ -59,7 +59,7 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = yolo_pretrain_net.IncompleteYoloPretrainConvNet(
+    model = yolo_net.YOLONet(
         dropout=args.dropout).to(args.device)
 
     run_manager = RunManager(new_run_name=args.run_name, source_files=[
