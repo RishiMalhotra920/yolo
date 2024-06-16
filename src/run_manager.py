@@ -1,13 +1,15 @@
 import io
 import os
-import torch
-from pathlib import Path
-from typing import Dict, Any
-import matplotlib.pyplot as plt
-import PIL.Image as Image
-import neptune
-import yaml
 import shutil
+from pathlib import Path
+from typing import Any, Dict
+
+import matplotlib.pyplot as plt
+import neptune
+import PIL.Image as Image
+import torch
+import yaml
+
 config = yaml.safe_load(open("config.yaml"))
 
 
@@ -16,7 +18,7 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, should_load_run: bool):
+    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, should_load_run: bool, source_files: list[str] = []):
 
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
@@ -28,13 +30,15 @@ class RunManager:
                 project="towards-hi/image-classification",
                 api_token=config["neptune_api_token"],
                 with_id=load_from_run_id,
+                source_files=source_files
             )
         else:
             assert new_run_name is not None, "new_run_name should not be None if should_load_run is False"
             self.run = neptune.init_run(
                 project="towards-hi/image-classification",
                 api_token=config["neptune_api_token"],
-                name=new_run_name
+                name=new_run_name,
+                source_files=source_files
             )
 
     def log_data(self, data: Dict[str, Any]) -> None:
@@ -57,6 +61,25 @@ class RunManager:
         """
         for key in data:
             self.run[key] = data[key]
+
+    def log_filesets(self, fileset_map: Dict[str, list[str]]) -> None:
+        """
+        Log filesets to the run.
+
+        Args:
+          filesets: a dictionary of filesets to log.
+
+        Example:
+          filesets = {
+            "model": ["model_builder.py", "model_trainer.py"],
+            "data": ["data_loader.py", "models/*.py", "data_loaders"]
+          }
+          you can use wildcards to upload all files in a directory
+          or directory names!
+        """
+
+        for fileset_name in fileset_map:
+            self.run[fileset_name].upload_files(fileset_map[fileset_name])
 
     def log_files(self, files: Dict[str, str]) -> None:
         """

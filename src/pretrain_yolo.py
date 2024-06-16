@@ -1,14 +1,16 @@
-from lr_scheduler import get_custom_lr_scheduler, get_fixed_lr_scheduler
-from run_manager import RunManager, load_checkpoint
-
 import argparse
 import os
+
 import torch
-import data_setup
-import engine
-import model_builder
-from torchvision import transforms
 import yaml
+from data_setup import yolo_pretrain_data_setup
+from lr_schedulers.yolo_pretrain_lr_scheduler import (get_custom_lr_scheduler,
+                                                      get_fixed_lr_scheduler)
+from models import yolo_pretrain_net
+from run_manager import RunManager, load_checkpoint
+from torchvision import transforms
+from trainers import yolo_pretrainer
+
 config = yaml.safe_load(open("config.yaml"))
 
 # to call this script, run the following command:
@@ -48,7 +50,7 @@ def train(args) -> None:
     num_workers = 8
 
     # Create DataLoaders with help from data_setup.py
-    train_dataloader, test_dataloader = data_setup.create_dataloaders(
+    train_dataloader, test_dataloader = yolo_pretrain_data_setup.create_dataloaders(
         root_dir=config["image_net_data_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
@@ -58,7 +60,8 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = model_builder.DeepConvNet(dropout=args.dropout).to(args.device)
+    model = yolo_pretrain_net.IncompleteYoloPretrainConvNet(
+        dropout=args.dropout).to(args.device)
 
     # if continue_from_checkpoint_run_id is provided but continue_from_checkpoint_path is not, start with a fresh model but continue logging to existing run
     # if continue_from_checkpoint_run_id and continue_from_checkpoint_path are provided, load the model from the checkpoint and continue logging to existing run
@@ -73,7 +76,7 @@ def train(args) -> None:
     else:
         epoch_start = 0
         run_manager = RunManager(
-            new_run_name=args.run_name, should_load_run=False)
+            new_run_name=args.run_name, should_load_run=False, source_files=["lr_schedulers/*.py", "models/*.py", "trainers/*.py", "pretrain_yolo.py"])
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -96,27 +99,21 @@ def train(args) -> None:
         "dropout": args.dropout,
     }
 
-    run_manager.log_data({"parameters": parameters,
-                          "model/summary": str(model),
-                          })
+    input()
 
-    run_manager.log_files({"model/code": "model_builder.py",
-                           "lr_scheduler/code": "lr_scheduler.py",
-                           })
-
-    engine.train(model=model,
-                 train_dataloader=train_dataloader,
-                 val_dataloader=test_dataloader,
-                 lr_scheduler=lr_scheduler,
-                 optimizer=optimizer,
-                 loss_fn=loss_fn,
-                 epoch_start=epoch_start,
-                 epoch_end=epoch_start + args.num_epochs,
-                 k_top=5,
-                 run_manager=run_manager,
-                 checkpoint_interval=args.checkpoint_interval,
-                 log_interval=args.log_interval,
-                 device=args.device)
+    yolo_pretrainer.train(model=model,
+                          train_dataloader=train_dataloader,
+                          val_dataloader=test_dataloader,
+                          lr_scheduler=lr_scheduler,
+                          optimizer=optimizer,
+                          loss_fn=loss_fn,
+                          epoch_start=epoch_start,
+                          epoch_end=epoch_start + args.num_epochs,
+                          k_top=5,
+                          run_manager=run_manager,
+                          checkpoint_interval=args.checkpoint_interval,
+                          log_interval=args.log_interval,
+                          device=args.device)
 
     run_manager.end_run()
 
