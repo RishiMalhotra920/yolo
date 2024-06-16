@@ -96,7 +96,6 @@ def train(args) -> None:
         print("epoch", epoch, "lr", optimizer.param_groups[0]['lr'])
 
     print('this is lr_scheduler current lr', optimizer.param_groups[0]['lr'])
-    # input()
 
     parameters = {
         "num_epochs": args.num_epochs,
@@ -108,7 +107,9 @@ def train(args) -> None:
         "dropout": args.dropout,
     }
 
-    input()
+    run_manager.log_data({"parameters": parameters,
+                          "model/summary": str(model),
+                          })
 
     yolo_pretrainer.train(model=model,
                           train_dataloader=train_dataloader,
