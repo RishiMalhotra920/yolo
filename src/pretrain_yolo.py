@@ -100,6 +100,7 @@ def train(args) -> None:
     parameters = {
         "num_epochs": args.num_epochs,
         "lr_scheduler": args.lr_scheduler,
+        "starting_lr": args.lr,
         "batch_size": args.batch_size,
         "loss_fn": "CrossEntropyLoss",
         "optimizer": "Adam",
