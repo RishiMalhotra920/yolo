@@ -41,6 +41,8 @@ def train_step(model: nn.Module,
         if batch != 0 and batch % log_interval == 0:
             run_manager.log_metrics({"train/loss": loss.item(),
                                      "train/accuracy": num_correct / num_predictions}, epoch + batch / len(dataloader))
+            num_correct = 0
+            num_predictions = 0
 
     train_loss = train_loss/len(dataloader)
     top_k_accuracy = num_correct / num_predictions
