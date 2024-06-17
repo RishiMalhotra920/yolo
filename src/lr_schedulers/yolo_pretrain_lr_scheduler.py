@@ -33,7 +33,7 @@ class CustomExponentialLR(_LRScheduler):
             print("Decay", self.last_epoch, self.growth_epochs,
                   self.final_lr ** (self.last_epoch - self.growth_epochs))
             exp_lr = self.final_lr * \
-                np.exp(-0.125 * (self.last_epoch - self.growth_epochs))
+                np.exp(-0.5 * (self.last_epoch - self.growth_epochs))
             exp_lr_with_floor = max(exp_lr, self.floor_lr)
             return [exp_lr_with_floor for base_lr in self.base_lrs]
 

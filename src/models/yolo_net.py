@@ -3,12 +3,19 @@ import torch.nn as nn
 from torchinfo import summary
 
 
-class YOLONet(nn.Module):
-    def __init__(self, dropout):
-        """
+class Reshape(nn.Module):
+    def __init__(self, shape):
+        super(Reshape, self).__init__()
+        self.shape = shape
 
-        """
-        super(YOLONet, self).__init__()
+    def forward(self, x):
+        return x.view(self.shape)
+
+
+class FeatureExtractor(nn.Module):
+    def __init__(self, dropout):
+
+        super(FeatureExtractor, self).__init__()
         self.block_1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=7, stride=2,
                       padding=3),  # originally stride 2
@@ -69,6 +76,45 @@ class YOLONet(nn.Module):
             nn.LeakyReLU(negative_slope=0.1)
         )
 
+        self.feature_extractor = nn.Sequential(
+            self.block_1,
+            self.block_2,
+            self.block_3,
+            self.block_4,
+            self.block_5,
+        )
+
+    def forward(self, x):
+        return self.feature_extractor(x)
+
+
+class YOLOPretrainNet(nn.Module):
+
+    def __init__(self, dropout):
+
+        super(YOLOPretrainNet, self).__init__()
+
+        self.pretrain_head = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Dropout(p=dropout),
+            nn.Linear(1024, 1000)
+        )
+        self.network = nn.Sequential(
+            FeatureExtractor(dropout),
+            self.pretrain_head
+        )
+
+    def forward(self, x):
+        return self.network(x)
+
+
+class YOLONet(nn.Module):
+
+    def __init__(self, dropout):
+
+        super(YOLONet, self).__init__()
+
         self.block_5_part_2 = nn.Sequential(
             nn.Conv2d(1024, 1024, kernel_size=3, padding=1),
             nn.LeakyReLU(negative_slope=0.1),
@@ -83,46 +129,42 @@ class YOLONet(nn.Module):
             nn.LeakyReLU(negative_slope=0.1),
         )
 
-        self.fc1 = nn.Linear(1024*7*7, 4096)
-        self.fc2 = nn.Linear(4096, 1470)
+        self.finetune_head = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(1024*7*7, 4096),
+            nn.ReLU(),
+            nn.Dropout(p=dropout),
+            nn.Linear(4096, 1470)
+        )
 
-        # adaptive avg pool is used to allow for any input size
-        # and output a fixed size tensor
-        # self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-
-        self.dropout = nn.Dropout(p=dropout)
+        self.network = nn.Sequential(
+            FeatureExtractor(dropout),
+            self.block_5_part_2,
+            self.block_6,
+            self.finetune_head,
+            Reshape((-1, 7, 7, 30))
+        )
 
     def forward(self, x):
-        x = self.block_1(x)
-        x = self.block_2(x)
-        x = self.block_3(x)
-        x = self.block_4(x)
-        x = self.block_5(x)
-        x = self.block_5_part_2(x)
-        x = self.block_6(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc1(x)
-        x = self.dropout(x)
-        x = self.fc2(x)
-        x = x.view(-1, 7, 7, 30)
-
-        # 30 units =>
-        # [0 .. 2]: bbox_1_x, bbox_2_x
-        # [3 .. 4]: bbox_1_y, bbox_2_y
-        # [5 .. 6]: bbox_1_w, bbox_2_w
-        # [7 .. 8]: bbox_1_h, bbox_2_h
-        # [9]: bbox_1_confidence
-        # [10]: bbox_2_confidence
-        # [11 .. 30]: class probabilities
-
-        return x
+        return self.network(x)
 
 
 if __name__ == "__main__":
-    # model = TinyVGG(hidden_units=128, output_shape=3)
 
-    # print(summary(model))
-    # print('-------')
-    model = YOLONet(dropout=0)
-    # print(summary(model))
-    summary(model, (1, 3, 448, 448))
+    # YOLO pretrain net
+    model = YOLOPretrainNet(dropout=0)
+
+    summary(model, (1, 3, 224, 224),
+            depth=5,
+            col_names=["input_size", "output_size",
+                       "num_params", "params_percent"],
+            row_settings=["var_names"])
+
+    # YOLO net
+    # model = YOLONet(dropout=0)
+
+    # summary(model, (1, 3, 448, 448),
+    #         depth=5,
+    #         col_names=["input_size", "output_size",
+    #                    "num_params", "params_percent"],
+    #         row_settings=["var_names"])
