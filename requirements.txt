@@ -1,0 +1,10 @@
+# install with 
+# conda install --file requirements.txt
+torch
+torchaudio
+torchinfo
+numpy
+matplotlib
+tqdm
+# have done some funky run cloning stuff
+neptune==1.10.4

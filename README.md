@@ -3,8 +3,8 @@
 Some commands to run training:
 
 ```
-python pretrain_yolo.py --num_epochs 10 --batch_size 4 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name cpu_run_on_image_net
-python pretrain_yolo.py --num_epochs 100 --batch_size 1024 --lr_scheduler 0.001 --dropout 0 --run_name image_net_train_deeper_network_and_dropout --device cuda
+python pretrain_yolo.py --num_epochs 10 --batch_size 4 --lr_scheduler custom --lr 0.001 --dropout 0 --run_name cpu_run_on_image_net
+python pretrain_yolo.py --num_epochs 100 --batch_size 256 --lr_scheduler custom --lr 0.001 --dropout 0 --run_name fixed_image_net_full_train --device cuda
 python pretrain_yolo.py --num_epochs 10 --batch_size 32 --lr_scheduler 0.001 --dropout 0 --run_name cpu_run_on_image_net
 ```
 
