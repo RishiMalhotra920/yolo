@@ -62,6 +62,9 @@ def train(args) -> None:
     model = yolo_net.YOLOPretrainNet(
         dropout=args.dropout).to(args.device)
 
+    if args.device == "cuda":
+        model = torch.nn.DataParallel(model)
+
     run_manager = RunManager(new_run_name=args.run_name, source_files=[
                              "lr_schedulers/*.py", "models/*.py", "trainers/*.py", "pretrain_yolo.py"])
     if args.continue_from_checkpoint_signature is not None:
@@ -75,9 +78,6 @@ def train(args) -> None:
         epoch_start = 0
 
         run_manager.add_tags(["new_run"])
-
-    if args.device == "cuda":
-        model = torch.nn.DataParallel(model)
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
