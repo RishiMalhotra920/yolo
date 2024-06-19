@@ -46,7 +46,7 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     and then keeps it constant at 0.01 for the remaining epochs.
     """
     scheduler = CustomExponentialLR(
-        optimizer, init_lr=0.0007, final_growth_lr=0.0007, growth_epochs=2, decay_epochs=20, floor_lr=0.0001)
+        optimizer, init_lr=0.0007, final_growth_lr=0.0007, growth_epochs=3, decay_epochs=20, floor_lr=0.0001)
     return scheduler
 
 
