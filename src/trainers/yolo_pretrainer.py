@@ -132,7 +132,7 @@ def train(model: torch.nn.Module,
                                  }, epoch+1)
 
         # saves model/epoch_5 at the end of epoch 5. epochs are 0 indexed.
-        if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
+        if (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)
 
         lr_scheduler.step()

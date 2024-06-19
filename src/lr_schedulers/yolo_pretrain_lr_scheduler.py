@@ -33,7 +33,7 @@ class CustomExponentialLR(_LRScheduler):
             print("Decay", self.last_epoch, self.growth_epochs,
                   self.final_lr ** (self.last_epoch - self.growth_epochs))
             exp_lr = self.final_lr * \
-                np.exp(-0.5 * (self.last_epoch - self.growth_epochs))
+                np.exp(-0.25 * (self.last_epoch - self.growth_epochs))
             exp_lr_with_floor = max(exp_lr, self.floor_lr)
             return [exp_lr_with_floor for base_lr in self.base_lrs]
 
@@ -46,7 +46,7 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     and then keeps it constant at 0.01 for the remaining epochs.
     """
     scheduler = CustomExponentialLR(
-        optimizer, init_lr=0.0007, final_growth_lr=0.0007, growth_epochs=5, decay_epochs=20, floor_lr=0.0001)
+        optimizer, init_lr=0.0007, final_growth_lr=0.0007, growth_epochs=2, decay_epochs=20, floor_lr=0.0001)
     return scheduler
 
 
