@@ -46,7 +46,7 @@ def visualize(args):
 
     load_checkpoint(model, args.checkpoint_signature)
 
-    predict_on_random_images(model, mini_val_dataset, n=10, seed=420)
+    predict_on_random_images(model, mini_val_dataset, n=10, seed=42)
 
     # display_random_images(train_dataset,
     #   class_names=class_names, n=5, seed=4)
