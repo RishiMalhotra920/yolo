@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 import torch
 import utils
-from run_manager import RunManager
+from src.run_manager import RunManager
 from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader

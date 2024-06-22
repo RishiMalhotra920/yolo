@@ -18,14 +18,14 @@ def create_datasets(root_dir: str, transform: transforms_v2.Compose) -> tuple[Da
                                           year='2012',
                                           image_set="train",
                                           transform=transform,
-                                          download=True,
+                                          download=False,
                                           target_transform=None)
 
     val_dataset = datasets.VOCDetection(root=root_dir,
                                         year='2012',
                                         image_set="val",
                                         transform=transform,
-                                        download=True,
+                                        download=False,
                                         target_transform=None)
     return train_dataset, val_dataset
 
@@ -78,4 +78,4 @@ if __name__ == "__main__":
 
     # you're gonna have a separate transform for visualization anyways so youre good.
 
-    label_transform =
+    # label_transform =

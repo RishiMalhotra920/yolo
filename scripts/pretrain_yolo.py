@@ -1,17 +1,23 @@
 import argparse
 import os
+import sys
 
 import torch
 import yaml
-from data_setup import yolo_train_data_setup
-from lr_schedulers.yolo_pretrain_lr_scheduler import (get_custom_lr_scheduler,
-                                                      get_fixed_lr_scheduler)
-from models import yolo_net
-from run_manager import RunManager, load_checkpoint
-from torchvision import transforms
-from trainers import yolo_pretrainer
+
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
+
+from src.data_setup import yolo_pretrain_data_setup
+from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
+    get_custom_lr_scheduler, get_fixed_lr_scheduler)
+from src.models import yolo_net
+from src.run_manager import RunManager, load_checkpoint
+from src.trainers import yolo_pretrainer
+from torchvision.transforms import v2 as transforms_v2
 
 config = yaml.safe_load(open("config.yaml"))
+
 
 # to call this script, run the following command:
 # start with learning rate 0.01 to speed the fuck out of the training. if it starts to bounce around, then we can decrease it.
@@ -33,15 +39,15 @@ def train(args) -> None:
 
     # yolo uses 448x448 images
     # Create transforms
-    data_transform = transforms.Compose([
+    data_transform = transforms_v2.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(30),
-        transforms.ColorJitter(brightness=0.5, contrast=0.5),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
+        transforms_v2.Resize((224, 224)),
+        transforms_v2.RandomHorizontalFlip(),
+        transforms_v2.RandomRotation((-30, 30)),
+        transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+        transforms_v2.ToTensor(),
+        transforms_v2.Normalize(mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225]),
         # transforms.RandomErasing()
     ])
 
@@ -49,7 +55,7 @@ def train(args) -> None:
     num_workers = cpu_count if cpu_count is not None else 0
 
     # Create DataLoaders with help from data_setup.py
-    train_dataloader, test_dataloader = yolo_train_data_setup.create_dataloaders(
+    train_dataloader, test_dataloader = yolo_pretrain_data_setup.create_dataloaders(
         root_dir=config["image_net_data_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
@@ -59,8 +65,11 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = yolo_net.YOLONet(
+    model = yolo_net.YOLOPretrainNet(
         dropout=args.dropout).to(args.device)
+
+    if args.device == "cuda":
+        model = torch.nn.DataParallel(model)
 
     run_manager = RunManager(new_run_name=args.run_name, source_files=[
                              "lr_schedulers/*.py", "models/*.py", "trainers/*.py", "pretrain_yolo.py"])
@@ -75,9 +84,6 @@ def train(args) -> None:
         epoch_start = 0
 
         run_manager.add_tags(["new_run"])
-
-    if args.device == "cuda":
-        model = torch.nn.DataParallel(model)
 
     # Set loss and optimizer
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -100,6 +106,7 @@ def train(args) -> None:
     parameters = {
         "num_epochs": args.num_epochs,
         "lr_scheduler": args.lr_scheduler,
+        "starting_lr": args.lr,
         "batch_size": args.batch_size,
         "loss_fn": "CrossEntropyLoss",
         "optimizer": "Adam",

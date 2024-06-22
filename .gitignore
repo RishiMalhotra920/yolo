@@ -9,5 +9,7 @@ src/config.yaml
 src/.neptune/
 setup.sh
 **/config.yaml
+**/.neptune/
+**/temp/
 *.ipynb
 .DS_Store

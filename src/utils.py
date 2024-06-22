@@ -2,6 +2,7 @@ import random
 from pathlib import Path
 from typing import Optional
 
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import torch
 
@@ -56,12 +57,62 @@ def display_random_images(dataset,
     plt.show()
 
 
-def predict_on_random_images(model: torch.nn.Module,
-                             dataset,
-                             *,
-                             class_names: list[str] | None = None,
-                             n: int = 5,
-                             seed: int | None = None):
+def predict_on_random_pascal_voc_images(model: torch.nn.Module,
+                                        dataset,
+                                        *,
+                                        class_names: list[str] | None = None,
+                                        n: int = 5,
+                                        seed: int | None = None):
+    if seed:
+        random.seed(seed)
+
+    random_samples_idx = random.sample(range(len(dataset)), k=n)
+
+    fig, axes = plt.subplots(1, n, figsize=(15, 3))
+
+    images = []
+    for i, index in enumerate(random_samples_idx):
+        image, annotations = dataset[index]
+        ax = axes[i]
+        # pred_logits = model(image.unsqueeze(0))
+        # print('pred_logits', pred_logits)
+        # pred = int(torch.argmax(pred_logits.squeeze()).item())
+        # print('pred', pred)
+
+        ax.imshow(image.permute(1, 2, 0))
+        # if class_names:
+        #     ax.set_title(
+        #         f"Label: {label} {class_names[label]}\nPred: {pred} {class_names[pred]}")
+        # else:
+        #     ax.set_title(f"Label: {label}\nPred: {pred}")
+
+        # Loop through the objects and draw each one
+        print('annotations', dataset[index])
+        objects = annotations['annotation']['object']
+        for obj in objects:
+            bbox = obj['bndbox']
+            x = int(bbox['xmin'])
+            y = int(bbox['ymin'])
+            width = int(bbox['xmax']) - x
+            height = int(bbox['ymax']) - y
+
+            # Create a rectangle patch for each object and add it to the plot
+            rect = patches.Rectangle(
+                (x, y), width, height, linewidth=2, edgecolor='r', facecolor='none')
+            ax.add_patch(rect)
+            ax.text(x, y - 10, obj['name'], color='white',
+                    fontsize=12, bbox=dict(facecolor='red', alpha=0.5))
+
+        ax.axis('off')
+    plt.show()
+
+
+def predict_on_random_image_net_images(model: torch.nn.Module,
+                                       dataset,
+                                       *,
+                                       class_names: list[str] | None = None,
+                                       n: int = 5,
+                                       seed: int | None = None):
     if seed:
         random.seed(seed)
 

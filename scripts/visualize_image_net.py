@@ -1,33 +1,39 @@
 import argparse
+import os
+import sys
 
 import torch
 import yaml
-from data_setup import yolo_pretrain_data_setup
-from models import yolo_net
-from run_manager import load_checkpoint
-from torchvision import transforms
-from utils import display_random_images, predict_on_random_images
+
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
+
+from src.data_setup import yolo_pretrain_data_setup
+from src.models import yolo_net
+from src.run_manager import load_checkpoint
+from src.utils import display_random_images, predict_on_random_image_net_images
+from torchvision.transforms import v2 as transforms_v2
 
 config = yaml.safe_load(open("config.yaml"))
 
 
 def visualize(args):
 
-    data_transform = transforms.Compose([
+    data_transform = transforms_v2.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(30),
-        transforms.ColorJitter(brightness=0.5, contrast=0.5),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225]),
+        transforms_v2.Resize((224, 224)),
+        transforms_v2.RandomHorizontalFlip(),
+        transforms_v2.RandomRotation((-30, 30)),
+        transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+        transforms_v2.ToTensor(),
+        transforms_v2.Normalize(mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225]),
         # transforms.RandomErasing()
     ])
 
-    to_tensor_transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
+    # to_tensor_transform = transforms_v2.Compose([
+    # transforms.ToTensor()
+    # ])
 
     classes = ["n01986214", "n02009912", "n01924916"]
     # class_names = get_class_names_from_folder_names(classes)
@@ -46,7 +52,7 @@ def visualize(args):
 
     load_checkpoint(model, args.checkpoint_signature)
 
-    predict_on_random_images(model, mini_val_dataset, n=10, seed=42)
+    predict_on_random_image_net_images(model, mini_val_dataset, n=10, seed=42)
 
     # display_random_images(train_dataset,
     #   class_names=class_names, n=5, seed=4)
@@ -54,7 +60,7 @@ def visualize(args):
 
 if __name__ == "__main__":
     # for example
-    # python visualize.py --checkpoint_signature=IM-122:checkpoints/epoch_14
+    # python visualize_image_net.py --checkpoint_signature=IM-122:checkpoints/epoch_14
 
     # --hidden_units 256
     parser = argparse.ArgumentParser(
