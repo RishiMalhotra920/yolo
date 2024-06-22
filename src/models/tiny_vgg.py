@@ -1,12 +1,15 @@
-from torchinfo import summary
 import torch
 import torch.nn as nn
+from torchinfo import summary
 
 
 class TinyVGG(nn.Module):
     def __init__(self, hidden_units: int, output_shape: int):
+        """
+        ~1.6M parameters
+        """
         super(TinyVGG, self).__init__()
-
+        assert False, "should set padding to all conv layers with kernel size"
         num_channels = hidden_units
 
         self.block_1 = nn.Sequential(
@@ -63,8 +66,3 @@ class TinyVGG(nn.Module):
         x = self.block_4(x)
         x = self.classifier(x)
         return x
-
-
-if __name__ == "__main__":
-    model = TinyVGG(hidden_units=128, output_shape=3)
-    # summary(model, (1, 3, 100, 100))

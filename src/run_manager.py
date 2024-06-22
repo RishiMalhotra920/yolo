@@ -1,14 +1,15 @@
 import io
 import os
-import torch
-from torch.utils.tensorboard.writer import SummaryWriter
-from pathlib import Path
-from typing import Dict, Any
-import matplotlib.pyplot as plt
-import PIL.Image as Image
-import neptune
-import yaml
 import shutil
+from pathlib import Path
+from typing import Any, Dict
+
+import matplotlib.pyplot as plt
+import neptune
+import PIL.Image as Image
+import torch
+import yaml
+
 config = yaml.safe_load(open("config.yaml"))
 
 
@@ -17,16 +18,41 @@ class RunManager:
     The job of the run manager is to manage experiment runs. It integrates
     '''
 
-    def __init__(self, run_name: str):
-        self.run_id = run_name
+    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, tags: list[str] = [], source_files: list[str] = []):
+
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
 
+        assert new_run_name is not None, "new_run_name should not be None"
         self.run = neptune.init_run(
             project="towards-hi/image-classification",
             api_token=config["neptune_api_token"],
-            name=run_name
+            name=new_run_name,
+            source_files=source_files,
+            tags=tags
         )
+
+    def add_tags(self, tags: list[str]) -> None:
+        """
+        Add tags to the run.
+
+        Args:
+          tags: a list of tags to add to the run.
+
+        Example:
+          tags = ["resnet", "cifar10"]
+        """
+        self.run["sys/tags"].add(tags)
+
+    def set_checkpoint_to_continue_from(self, checkpoint_to_continue_from_signature: str) -> None:
+        """
+        Set the checkpoint to continue from.
+
+        Args:
+          checkpoint_to_continue_from_signature: a string in the format RunId:CheckpointPath
+        """
+        self.log_data(
+            {"checkpoint_to_continue_from_signature": checkpoint_to_continue_from_signature})
 
     def log_data(self, data: Dict[str, Any]) -> None:
         """
@@ -49,6 +75,25 @@ class RunManager:
         for key in data:
             self.run[key] = data[key]
 
+    def log_filesets(self, fileset_map: Dict[str, list[str]]) -> None:
+        """
+        Log filesets to the run.
+
+        Args:
+          filesets: a dictionary of filesets to log.
+
+        Example:
+          filesets = {
+            "model": ["model_builder.py", "model_trainer.py"],
+            "data": ["data_loader.py", "models/*.py", "data_loaders"]
+          }
+          you can use wildcards to upload all files in a directory
+          or directory names!
+        """
+
+        for fileset_name in fileset_map:
+            self.run[fileset_name].upload_files(fileset_map[fileset_name])
+
     def log_files(self, files: Dict[str, str]) -> None:
         """
         Log files to the run.
@@ -64,9 +109,11 @@ class RunManager:
         for key in files:
             self.run[key].upload(files[key])
 
-    def log_metrics(self, metrics: Dict[str, float], epoch: int) -> None:
+    def log_metrics(self, metrics: Dict[str, float], epoch: float) -> None:
         """
         Track metrics for the run and plot it on neptune.
+
+        epoch can be a float - a float epoch denotes that we are logging a fraction of the way through the epoch
 
         Args:
           metrics: a dictionary of metrics to track.
@@ -106,13 +153,15 @@ class RunManager:
         # to add more info, do this: epoch_{epoch}_lr_{lr}_bs_{bs}.pth
         # later on you can implement a json file to store info about checkpoints
 
+        # need this here in case temp dir is deleted between run creation and model saving
+        self.temp_dir.mkdir(exist_ok=True)
         model_save_path = self.temp_dir / f"{epoch}.pth"
         print(f"[INFO] Saving model to {model_save_path}")
         torch.save(obj=model.state_dict(), f=model_save_path)
         self.run[f"checkpoints/epoch_{epoch}"].upload(str(model_save_path))
 
 
-def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -> int:
+def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
     """
     Loads a PyTorch model weights from a run at an epoch.
     Args:
@@ -122,6 +171,8 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     Example usage:
         load_model(model=model_0, epoch=5)
     """
+    assert ":" in checkpoint_signature, "checkpoint_signature should be in the format RunId:CheckpointPath"
+    run_id, checkpoint_path = checkpoint_signature.split(":")
     assert not checkpoint_path.endswith(
         ".pth"), "checkpoint_path should not end with .pth"
 
@@ -144,6 +195,10 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     # file_name should be epoch_{epoch}.pth
     epoch_number = int(file_name.split("_")[1])
 
+    # we save logs for the epoch number that was completed
+    # we should start logging from the next epoch
+    start_epoch = epoch_number + 1
+
     print('this is epoch_number', epoch_number)
 
     try:
@@ -151,4 +206,4 @@ def load_checkpoint(model: torch.nn.Module, run_id: str, checkpoint_path: str) -
     except Exception as e:
         print(f"Failed to remove directory: {e}")
 
-    return epoch_number
+    return start_epoch

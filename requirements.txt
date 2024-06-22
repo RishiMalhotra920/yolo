@@ -6,4 +6,5 @@ torchinfo
 numpy
 matplotlib
 tqdm
-neptune
+# have done some funky run cloning stuff
+neptune==1.10.4

@@ -1,7 +1,7 @@
-from data_setup import BaseDataset
-from typing import Optional
-from pathlib import Path
 import random
+from pathlib import Path
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import torch
 
@@ -30,7 +30,7 @@ def count_top_k_correct(output: torch.Tensor, target: torch.Tensor, k: int):
     return correct
 
 
-def display_random_images(dataset: BaseDataset,
+def display_random_images(dataset,
                           *,
                           class_names: list[str] | None = None,
                           n: int = 5,
@@ -57,7 +57,7 @@ def display_random_images(dataset: BaseDataset,
 
 
 def predict_on_random_images(model: torch.nn.Module,
-                             dataset: BaseDataset,
+                             dataset,
                              *,
                              class_names: list[str] | None = None,
                              n: int = 5,
@@ -83,7 +83,7 @@ def predict_on_random_images(model: torch.nn.Module,
             ax.set_title(
                 f"Label: {label} {class_names[label]}\nPred: {pred} {class_names[pred]}")
         else:
-            ax.set_title(f"Label: {label} Pred: {pred}")
+            ax.set_title(f"Label: {label}\nPred: {pred}")
 
         ax.axis('off')
     plt.show()
