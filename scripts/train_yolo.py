@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
 
 from src.data_setup import yolo_train_data_setup
+from src.loss_functions.yolo_loss_function import YOLOLoss
 from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
     get_custom_lr_scheduler, get_fixed_lr_scheduler)
 from src.models import yolo_net
@@ -85,7 +86,9 @@ def train(args) -> None:
         model = torch.nn.DataParallel(model)
 
     # Set loss and optimizer
-    loss_fn = torch.nn.CrossEntropyLoss()
+    # loss_fn = torch.nn.CrossEntropyLoss()
+
+    loss_fn = YOLOLoss()
 
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=args.lr)

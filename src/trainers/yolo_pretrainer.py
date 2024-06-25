@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 def train_step(model: nn.Module,
                dataloader: DataLoader,
-               loss_fn: nn.modules.loss._Loss,
+               loss_fn: nn.modules.loss._Loss | nn.Module,
                optimizer: Optimizer,
                k_top: int,
                run_manager: RunManager,
@@ -52,7 +52,7 @@ def train_step(model: nn.Module,
 
 def test_step(model: nn.Module,
               dataloader: DataLoader,
-              loss_fn: nn.modules.loss._Loss,
+              loss_fn: nn.modules.loss._Loss | nn.Module,
               k_top: int,
               device: str) -> dict[str, float]:
 
@@ -87,7 +87,7 @@ def train(model: torch.nn.Module,
           val_dataloader: DataLoader,
           lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
           optimizer: torch.optim.Optimizer,
-          loss_fn: nn.modules.loss._Loss,
+          loss_fn: nn.modules.loss._Loss | nn.Module,
           epoch_start: int,
           epoch_end: int,
           k_top: int,

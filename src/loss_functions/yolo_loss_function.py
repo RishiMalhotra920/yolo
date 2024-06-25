@@ -1,105 +1,117 @@
 import torch
+import torch.nn.functional as F
+import yaml
 from torch import nn
+from torchvision.datasets import VOCDetection
+
+
+def calculate_iou(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torch.Tensor:
+    """
+    tensor1 and tensor2 are of shape (batch_size, S, S, 4)
+
+    the last dimension of the tensor represents x_center, y_center, width, height
+
+    calculate the intersection over each cell of the grid for tensor1 and tensor2
+
+    Returns:
+        iou: torch.Tensor of shape (batch_size, S, S)
+    """
+    # return torch.tensor([2, 3])
+
+    tl_x1 = tensor1[:, :, :, 0] - tensor1[:, :, :, 2] / 2
+    tl_y1 = tensor1[:, :, :, 1] - tensor1[:, :, :, 3] / 2
+    br_x1 = tensor1[:, :, :, 0] + tensor1[:, :, :, 2] / 2
+    br_y1 = tensor1[:, :, :, 1] + tensor1[:, :, :, 3] / 2
+
+    tl_x2 = tensor2[:, :, :, 0] - tensor2[:, :, :, 2] / 2
+    tl_y2 = tensor2[:, :, :, 1] - tensor2[:, :, :, 3] / 2
+    br_x2 = tensor2[:, :, :, 0] + tensor2[:, :, :, 2] / 2
+    br_y2 = tensor2[:, :, :, 1] + tensor2[:, :, :, 3] / 2
+
+    tl_x = torch.max(tl_x1, tl_x2)
+    tl_y = torch.max(tl_y1, tl_y2)
+    br_x = torch.min(br_x1, br_x2)
+    br_y = torch.min(br_y1, br_y2)
+
+    intersection = torch.max(br_x - tl_x, torch.tensor(0)) * \
+        torch.max(br_y - tl_y, torch.tensor(0))
+
+    width1 = tensor1[:, :, :, 2]
+    height1 = tensor1[:, :, :, 3]
+    width2 = tensor2[:, :, :, 2]
+    height2 = tensor2[:, :, :, 3]
+
+    union = width1 * height1 + width2 * height2 - intersection
+
+    return intersection / union
+
+    # given
 
 
 class YOLOLoss(nn.Module):
     def __init__(self):
         super(YOLOLoss, self).__init__()
+        self.lambda_coord = 5
+        self.lambda_noobj = 0.5
 
-    def forward(self, inputs, targets):
-        lambda_coord = 5
-        lambda_noobj = 0.5
-        num_anchors = 2
-        num_classes = 20
-        batch_size = inputs.shape[0]
-        grid_size = inputs.shape[2]
-        stride = 1 / grid_size
+    def forward(self, preds: torch.Tensor, labels: torch.Tensor):
 
-        # Split the inputs into bounding box, objectness and class predictions
-        bounding_box_predictions = inputs[:, :num_anchors * 5, :, :]
+        bs = preds.shape[0]  # batch size
+        B = 2
+        C = 20
+        S = 7
 
-        objectness_predictions = inputs[:, num_anchors *
-                                        5:num_anchors * 5 + num_anchors, :, :]
+        # TODO; maybe you can initialize these as zero tensors and then assign them.
+        ious_per_cell = torch.zeros((bs, S, S, B*B))
+        bbox_losses = torch.zeros((bs, S, S, B*B))
+        wh_losses = torch.zeros((bs, S, S, B*B))
+        conf_losses = torch.zeros((bs, S, S, B*B))
 
-        class_predictions = inputs[:, num_anchors * 5 + num_anchors:, :, :]
+        for pred_idx in range(B):
+            for label_idx in range(B):
 
-        # Split the targets into bounding box, objectness and class targets
-        bounding_box_targets = targets[:, :num_anchors * 5, :, :]
-        objectness_targets = targets[:, num_anchors *
-                                     5:num_anchors * 5 + num_anchors, :, :]
-        class_targets = targets[:, num_anchors * 5 + num_anchors:, :, :]
+                this_pred_bbox = preds[:, :, :, pred_idx * 5:pred_idx * 5 + 5]
+                this_label_bbox = labels[:, :, :,
+                                         label_idx * 5:label_idx * 5 + 5]
+                this_bbox_loss = F.mse_loss(
+                    this_pred_bbox, this_label_bbox, reduction='none')
+                this_iou = calculate_iou(
+                    this_pred_bbox, this_label_bbox)  # (bs, S, S)
 
-        # Calculate the loss for the bounding box predictions
-        bounding_box_predictions = bounding_box_predictions.view(
-            batch_size, num_anchors, 5, grid_size, grid_size)
-        bounding_box_targets = bounding_box_targets.view(
-            batch_size, num_anchors, 5, grid_size, grid_size)
-        bounding_box_predictions = bounding_box_predictions.permute(
-            0, 1, 3, 4, 2)
-        bounding_box_targets = bounding_box_targets.permute(0, 1, 3, 4, 2)
-        bounding_box_predictions_xy = torch.sigmoid(
-            bounding_box_predictions[:, :, :, :, :2])
-        bounding_box_predictions_wh = torch.exp(
-            bounding_box_predictions[:, :, :, :, 2:4])
-        bounding_box_targets_xy = bounding_box_targets[:, :, :, :, :2]
-        bounding_box_targets_wh = bounding_box_targets[:, :, :, :, 2:4]
-        bounding_box_predictions_confidence = torch.sigmoid(
-            bounding_box_predictions[:, :, :, :, 4:5])
-        bounding_box_targets_confidence = bounding_box_targets[:, :, :, :, 4:5]
-        bounding_box_targets_confidence = bounding_box_targets_confidence.unsqueeze(
-            -1)
-        bounding_box_predictions_xy = bounding_box_predictions_xy * stride + \
-            torch.arange(grid_size).view(1, 1, -1, 1).float() * stride
-        bounding_box_predictions_wh = bounding_box_predictions_wh * stride
-        bounding_box_targets_xy = bounding_box_targets_xy * stride + \
-            torch.arange(grid_size).view(1, 1, -1, 1).float() * stride
-        bounding_box_targets_wh = bounding_box_targets_wh * stride
-        bounding_box_predictions_xy_min = bounding_box_predictions_xy - \
-            bounding_box_predictions_wh / 2
-        bounding_box_predictions_xy_max = bounding_box_predictions_xy + \
-            bounding_box_predictions_wh / 2
-        bounding_box_targets_xy_min = bounding_box_targets_xy - bounding_box_targets_wh / 2
-        bounding_box_targets_xy_max = bounding_box_targets_xy + bounding_box_targets_wh / 2
-        bounding_box_predictions_area = bounding_box_predictions_wh.prod(
-            dim=-1)
-        bounding_box_targets_area = bounding_box_targets_wh.prod(dim=-1)
-        bounding_box_predictions_intersection_min = torch.max(
-            bounding_box_predictions_xy_min, bounding_box_targets_xy_min)
-        bounding_box_predictions_intersection_max = torch.min(
-            bounding_box_predictions_xy_max, bounding_box_targets_xy_max)
-        bounding_box_predictions_intersection_wh = torch.clamp(
-            bounding_box_predictions_intersection_max - bounding_box_predictions_intersection_min, min=0)
-        bounding_box_predictions_intersection_area = bounding_box_predictions_intersection_wh.prod(
-            dim=-1)
-        bounding_box_predictions_union_area = bounding_box_predictions_area + \
-            bounding_box_targets_area - bounding_box_predictions_intersection_area
-        bounding_box_predictions_iou = bounding_box_predictions_intersection_area / \
-            bounding_box_predictions_union_area
-        bounding_box_targets_iou = bounding_box_targets_confidence
-        bounding_box_loss = torch.sum(
-            (bounding_box_predictions_iou - bounding_box_targets_iou) ** 2)
-        bounding_box_loss = bounding_box_loss / batch_size
+                this_pred_w = this_pred_bbox[:, :, :, 2]
+                this_pred_h = this_pred_bbox[:, :, :, 3]
+                this_label_w = this_label_bbox[:, :, :, 2]
+                this_label_h = this_label_bbox[:, :, :, 3]
 
-        # Calculate the loss for the objectness predictions
-        objectness_predictions = objectness_predictions.view(
-            batch_size, num_anchors, grid_size, grid_size)
-        objectness_targets = objectness_targets.view(
-            batch_size, num_anchors, grid_size, grid_size)
-        objectness_predictions = objectness_predictions.unsqueeze(-1)
-        objectness_targets = objectness_targets.unsqueeze(-1)
-        objectness_loss = torch.sum(
-            (objectness_predictions - objectness_targets) ** 2)
-        objectness_loss = objectness_loss / batch_size
+                this_wh_loss = F.mse_loss(this_pred_w, this_label_w, reduction='none') + F.mse_loss(
+                    this_pred_h, this_label_h, reduction='none')  # (bs, S, S)
+                # originally 4:5. (batch_size, S, S)
+                this_conf_loss = F.mse_loss(
+                    this_pred_bbox[:, :, :, 4], this_label_bbox[:, :, :, 4], reduction='none')
 
-        # Calculate the loss for the class predictions
-        class_predictions = class_predictions
-        class_targets = class_targets
-        class_loss = torch.nn.functional.cross_entropy(
-            class_predictions, class_targets)
-        class_loss = class_loss / batch_size
+                ious_per_cell[:, :, pred_idx * B + label_idx] = this_iou
+                bbox_losses[:, :, pred_idx * B + label_idx] = this_bbox_loss
+                wh_losses[:, :, pred_idx * B + label_idx] = this_wh_loss
+                conf_losses[:, :, pred_idx * B + label_idx] = this_conf_loss
 
-        # Calculate the total loss
-        total_loss = lambda_coord * bounding_box_loss + \
-            lambda_noobj * objectness_loss + class_loss
+                # remember to multiply by lambda_noobj if the object is not present in the cell.
 
-        return total_loss
+        argmax_iou_per_cell = torch.argmax(ious_per_cell, dim=3)  # (bs, S, S)
+
+        # one-hot vector represents which predictor is responsible for predicting the object.
+        argmax_iou_per_cell_onehot = torch.nn.functional.one_hot(
+            argmax_iou_per_cell, num_classes=B*B)  # (bs, S, S, B*B)
+
+        # multiply by one hot vector to get only the loss for the predictor responsible for the object.
+        bbox_loss = torch.mean(argmax_iou_per_cell_onehot*bbox_losses)
+        wh_loss = torch.mean(argmax_iou_per_cell_onehot*wh_losses)
+        conf_loss = torch.mean(argmax_iou_per_cell_onehot*conf_losses)
+        conf_noobj_loss = torch.mean(
+            (1 - argmax_iou_per_cell_onehot) * conf_losses)
+
+        clf_loss = F.mse_loss(preds[:, :, :, B*5:], labels[:, :, :, B*5:])
+
+        loss = self.lambda_coord * (bbox_loss + wh_loss) + conf_loss + \
+            self.lambda_noobj * clf_loss + conf_noobj_loss
+
+        return loss
