@@ -8,13 +8,14 @@ import yaml
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
 
+import color_code_error_messages
 from src.data_setup import yolo_train_data_setup
 from src.loss_functions.yolo_loss_function import YOLOLoss
 from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
     get_custom_lr_scheduler, get_fixed_lr_scheduler)
 from src.models import yolo_net
 from src.run_manager import RunManager, load_checkpoint
-from src.trainers import yolo_pretrainer
+from src.trainers import yolo_trainer
 from torchvision.transforms import v2 as transforms_v2
 
 config = yaml.safe_load(open("config.yaml"))
@@ -41,7 +42,7 @@ def train(args) -> None:
     # Create transforms
     data_transform = transforms_v2.Compose([
         # transforms.RandomResizedCrop(50),
-        transforms_v2.Resize((224, 224)),
+        transforms_v2.Resize((448, 448)),
         transforms_v2.RandomHorizontalFlip(),
         transforms_v2.RandomRotation((-30, 30)),
         transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
@@ -56,7 +57,7 @@ def train(args) -> None:
 
     # Create DataLoaders with help from data_setup.py
     train_dataloader, test_dataloader = yolo_train_data_setup.create_dataloaders(
-        root_dir=config["image_net_data_dir"],
+        root_dir=config["pascal_voc_root_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
         num_workers=num_workers
@@ -119,19 +120,19 @@ def train(args) -> None:
                           "model/summary": str(model),
                           })
 
-    yolo_pretrainer.train(model=model,
-                          train_dataloader=train_dataloader,
-                          val_dataloader=test_dataloader,
-                          lr_scheduler=lr_scheduler,
-                          optimizer=optimizer,
-                          loss_fn=loss_fn,
-                          epoch_start=epoch_start,
-                          epoch_end=epoch_start + args.num_epochs,
-                          k_top=5,
-                          run_manager=run_manager,
-                          checkpoint_interval=args.checkpoint_interval,
-                          log_interval=args.log_interval,
-                          device=args.device)
+    yolo_trainer.train(model=model,
+                       train_dataloader=train_dataloader,
+                       val_dataloader=test_dataloader,
+                       lr_scheduler=lr_scheduler,
+                       optimizer=optimizer,
+                       loss_fn=loss_fn,
+                       epoch_start=epoch_start,
+                       epoch_end=epoch_start + args.num_epochs,
+                       k_top=5,
+                       run_manager=run_manager,
+                       checkpoint_interval=args.checkpoint_interval,
+                       log_interval=args.log_interval,
+                       device=args.device)
 
     run_manager.end_run()
 
