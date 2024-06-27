@@ -152,8 +152,8 @@ def train(model: torch.nn.Module,
 
         run_manager.log_metrics({"train/loss": train_step_dict["loss"],
                                  "val/loss": val_step_dict["loss"],
-                                 "train/accuracy": train_step_dict["top_k_accuracy"],
-                                 "val/accuracy": val_step_dict["top_k_accuracy"],
+                                 "train/accuracy": train_step_dict["accuracy"],
+                                 "val/accuracy": val_step_dict["accuracy"],
                                  "learning_rate": optimizer.param_groups[0]["lr"]
                                  }, epoch+1)
 
