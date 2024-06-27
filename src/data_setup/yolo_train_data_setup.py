@@ -13,7 +13,7 @@ from torchvision.transforms import v2 as transforms_v2
 config = yaml.safe_load(open("config.yaml"))
 
 VOC_CLASSES = [
-    'background', 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
+    'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
     'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike',
     'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
 ]
@@ -23,6 +23,11 @@ class_to_index = {cls_name: idx for idx,
 
 
 def yolo_target_transform(annotation: dict) -> torch.Tensor:
+    """
+    labels[..., 2] and labels[..., 7] are the width of bbox 1 and bbox 2
+    if a grid cell has no labels, then labels[..., 2] and labels[..., 7] will be 0
+    if a grid cell has only one label, then labels[..., 2] will be 0
+    """
     # a = {'annotation': {'folder': 'VOC2012', 'filename': '2008_000008.jpg', 'source': {'database': 'The VOC2008 Database', 'annotation': 'PASCAL VOC2008', 'image': 'flickr'}, 'size': {'width': '500', 'height': '442', 'depth': '3'}, 'segmented': '0', 'object': [
     # {'name': 'horse', 'pose': 'Left', 'truncated': '0', 'occluded': '1', 'bndbox': {'xmin': '53', 'ymin': '87', 'xmax': '471', 'ymax': '420'}, 'difficult': '0'}, {'name': 'person', 'pose': 'Unspecified', 'truncated': '1', 'occluded': '0', 'bndbox': {'xmin': '158', 'ymin': '44', 'xmax': '289', 'ymax': '167'}, 'difficult': '0'}]}}
 

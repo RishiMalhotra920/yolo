@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 import torch
-import utils
+from src import utils
 from src.run_manager import RunManager
 from torch import nn
 from torch.optim import Optimizer
@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 def train_step(model: nn.Module,
                dataloader: DataLoader,
-               loss_fn: nn.modules.loss._Loss,
+               loss_fn: nn.modules.loss._Loss | nn.Module,
                optimizer: Optimizer,
                k_top: int,
                run_manager: RunManager,
@@ -21,6 +21,10 @@ def train_step(model: nn.Module,
     model.train()
     train_loss = 0
     num_correct = 0
+    num_incorrect_localization = 0
+
+    num_incorrect_other = 0
+    num_incorrect_background = 0
     num_predictions = 0
 
     for batch, (X, y) in tqdm(enumerate(dataloader), total=len(dataloader), desc="Train Step", leave=False):
@@ -35,22 +39,37 @@ def train_step(model: nn.Module,
         loss.backward()
         optimizer.step()
 
-        num_correct += utils.count_top_k_correct(y_pred, y, k_top)
+        result_dict = utils.get_yolo_metrics(y_pred, y)
+
+        # num_correct += utils.count_top_k_correct(y_pred, y, k_top)
+        num_correct += result_dict["num_correct"]
+        num_incorrect_localization += result_dict["num_incorrect_localization"]
+        num_incorrect_other += result_dict["num_incorrect_other"]
+        num_incorrect_background += result_dict["num_incorrect_background"]
+
         num_predictions += len(y)
 
         if batch != 0 and batch % log_interval == 0:
             run_manager.log_metrics({"train/loss": loss.item(),
                                      "train/accuracy": num_correct / num_predictions}, epoch + batch / len(dataloader))
+            num_correct = 0
+            num_incorrect_localization = 0
 
-    train_loss = train_loss/len(dataloader)
-    top_k_accuracy = num_correct / num_predictions
+            num_incorrect_other = 0
+            num_incorrect_background = 0
+            num_predictions = 0
 
-    return {"loss": train_loss, "top_k_accuracy": top_k_accuracy}
+    return {"loss": train_loss/len(dataloader),
+            "accuracy": num_correct / num_predictions,
+            "num_incorrect_localization": num_incorrect_localization / num_predictions,
+
+            "num_incorrect_other": num_incorrect_other / num_predictions,
+            "num_incorrect_background": num_incorrect_background / num_predictions}
 
 
 def test_step(model: nn.Module,
               dataloader: DataLoader,
-              loss_fn: nn.modules.loss._Loss,
+              loss_fn: nn.modules.loss._Loss | nn.Module,
               k_top: int,
               device: str) -> dict[str, float]:
 
@@ -58,6 +77,9 @@ def test_step(model: nn.Module,
 
     test_loss = 0
     num_correct = 0
+    num_incorrect_localization = 0
+    num_incorrect_other = 0
+    num_incorrect_background = 0
     num_predictions = 0
 
     with torch.inference_mode():
@@ -65,19 +87,25 @@ def test_step(model: nn.Module,
         for batch, (X, y) in tqdm(enumerate(dataloader), total=len(dataloader), desc="Test Step", leave=False):
             X, y = X.to(device), y.to(device)
 
-            test_pred_logits = model(X)
+            y_pred = model(X)
 
-            loss = loss_fn(test_pred_logits, y)
+            loss = loss_fn(y_pred, y)
             test_loss += loss.item()
 
-            num_correct += utils.count_top_k_correct(
-                test_pred_logits, y, k_top)
+            result_dict = utils.get_yolo_metrics(y_pred, y)
+
+            num_correct += result_dict["num_correct"]
+            num_incorrect_localization += result_dict["num_incorrect_localization"]
+            num_incorrect_other += result_dict["num_incorrect_other"]
+            num_incorrect_background += result_dict["num_incorrect_background"]
+
             num_predictions += len(y)
 
-    test_loss = test_loss / len(dataloader)
-    top_k_accuracy = num_correct / num_predictions
-
-    return {"loss": test_loss, "top_k_accuracy": top_k_accuracy}
+    return {"loss": test_loss/len(dataloader),
+            "accuracy": num_correct / num_predictions,
+            "num_incorrect_localization": num_incorrect_localization / num_predictions,
+            "num_incorrect_other": num_incorrect_other / num_predictions,
+            "num_incorrect_background": num_incorrect_background / num_predictions}
 
 
 def train(model: torch.nn.Module,
@@ -85,7 +113,7 @@ def train(model: torch.nn.Module,
           val_dataloader: DataLoader,
           lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
           optimizer: torch.optim.Optimizer,
-          loss_fn: nn.modules.loss._Loss,
+          loss_fn: nn.modules.loss._Loss | nn.Module,
           epoch_start: int,
           epoch_end: int,
           k_top: int,
@@ -130,7 +158,7 @@ def train(model: torch.nn.Module,
                                  }, epoch+1)
 
         # saves model/epoch_5 at the end of epoch 5. epochs are 0 indexed.
-        if epoch != 0 and (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
+        if (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
             run_manager.save_model(model, epoch)
 
         lr_scheduler.step()

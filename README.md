@@ -28,3 +28,9 @@ python pretrain_yolo.py --num_epochs 10 --batch_size 32 --lr_scheduler fixed --l
 ```
 python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name yolo_trial_run
 ```
+
+## To train YOLO on GPU
+
+```
+python train_yolo.py --num_epochs 10 --batch_size 512 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name yolo_trial_run_on_gpu --device cuda
+```
