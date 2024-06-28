@@ -9,6 +9,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 
 from torchvision.transforms import v2 as transforms_v2
 
+from src.checkpoint_loader import (
+    load_checkpoint,
+    load_checkpoint_for_yolo_from_pretrained_image_net_model,
+)
 from src.data_setup import yolo_train_data_setup
 from src.loss_functions.yolo_loss_function import YOLOLoss
 from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
@@ -16,7 +20,7 @@ from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
     get_fixed_lr_scheduler,
 )
 from src.models import yolo_net
-from src.run_manager import RunManager, load_checkpoint
+from src.run_manager import RunManager
 from src.trainers import yolo_trainer
 
 config = yaml.safe_load(open("config.yaml"))
@@ -80,21 +84,33 @@ def train(args) -> None:
             "pretrain_yolo.py",
         ],
     )
-    if args.continue_from_checkpoint_signature is not None:
+    # if args.device == "cuda":
+    # do this even on cpu to figure out if the model on the gpu is working.
+    model = torch.nn.DataParallel(model)
+
+    if args.continue_from_yolo_checkpoint_signature is not None:
         epoch_start = load_checkpoint(
-            model, checkpoint_signature=args.continue_from_checkpoint_signature
+            model, checkpoint_signature=args.continue_from_yolo_checkpoint_signature
         )
         run_manager.add_tags(["run_continuation"])
         run_manager.set_checkpoint_to_continue_from(
-            args.continue_from_checkpoint_signature
+            args.continue_from_yolo_checkpoint_signature
         )
+    elif args.continue_from_image_net_checkpoint_signature is not None:
+        load_checkpoint_for_yolo_from_pretrained_image_net_model(
+            model,
+            checkpoint_signature=args.continue_from_image_net_checkpoint_signature,
+        )
+        run_manager.add_tags(["run_continuation"])
+        run_manager.set_checkpoint_to_continue_from(
+            args.continue_from_image_net_checkpoint_signature
+        )
+        epoch_start = 0
+        run_manager.add_tags(["pretrained_image_net_run"])
     else:
         epoch_start = 0
 
         run_manager.add_tags(["new_run"])
-
-    if args.device == "cuda":
-        model = torch.nn.DataParallel(model)
 
     # Set loss and optimizer
     # loss_fn = torch.nn.CrossEntropyLoss()
@@ -198,10 +214,16 @@ if __name__ == "__main__":
         help="The number of epochs to wait before saving model checkpoint",
     )
     parser.add_argument(
-        "--continue_from_checkpoint_signature",
+        "--continue_from_yolo_checkpoint_signature",
         type=str,
         default=None,
         help="Checkpoint signature for the run continue training from in the format: RunId:CheckpointPath eg: IM-23:checkpoints/epoch_10.pth",
+    )
+    parser.add_argument(
+        "--continue_from_image_net_checkpoint_signature",
+        type=str,
+        default=None,
+        help="Checkpoint signature for the run continue training from for YOLO image net in the format: RunId:CheckpointPath eg: IM-23:checkpoints/epoch_10.pth",
     )
 
     parser.add_argument(

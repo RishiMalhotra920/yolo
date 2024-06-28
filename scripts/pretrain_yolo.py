@@ -9,13 +9,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 
 from torchvision.transforms import v2 as transforms_v2
 
+from src.checkpoint_loader import load_checkpoint
 from src.data_setup import yolo_pretrain_data_setup
 from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
     get_custom_lr_scheduler,
     get_fixed_lr_scheduler,
 )
 from src.models import yolo_net
-from src.run_manager import RunManager, load_checkpoint
+from src.run_manager import RunManager
 from src.trainers import yolo_pretrainer
 
 config = yaml.safe_load(open("config.yaml"))
@@ -71,8 +72,9 @@ def train(args) -> None:
     # Create model with help from model_builder.py
     model = yolo_net.YOLOPretrainNet(dropout=args.dropout).to(args.device)
 
-    if args.device == "cuda":
-        model = torch.nn.DataParallel(model)
+    # if args.device == "cuda":
+    # do this even on cpu to figure out if the model on the gpu is working.
+    model = torch.nn.DataParallel(model)
 
     run_manager = RunManager(
         new_run_name=args.run_name,
