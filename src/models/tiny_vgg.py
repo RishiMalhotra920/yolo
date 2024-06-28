@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torchinfo import summary
 
 
 class TinyVGG(nn.Module):
@@ -19,7 +18,7 @@ class TinyVGG(nn.Module):
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_channels),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
+            nn.MaxPool2d(kernel_size=2),
         )
 
         self.block_2 = nn.Sequential(
@@ -29,7 +28,7 @@ class TinyVGG(nn.Module):
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_channels),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
+            nn.MaxPool2d(kernel_size=2),
         )
 
         self.block_3 = nn.Sequential(
@@ -39,7 +38,7 @@ class TinyVGG(nn.Module):
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_channels),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
+            nn.MaxPool2d(kernel_size=2),
         )
 
         self.block_4 = nn.Sequential(
@@ -49,14 +48,14 @@ class TinyVGG(nn.Module):
             nn.Conv2d(num_channels, num_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_channels),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
+            nn.MaxPool2d(kernel_size=2),
         )
 
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(num_channels*6*6, hidden_units),
+            nn.Linear(num_channels * 6 * 6, hidden_units),
             nn.ReLU(),
-            nn.Linear(hidden_units, output_shape)
+            nn.Linear(hidden_units, output_shape),
         )
 
     def forward(self, x: torch.Tensor):

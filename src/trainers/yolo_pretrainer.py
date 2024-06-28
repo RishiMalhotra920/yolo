@@ -1,30 +1,32 @@
-from typing import Any, Dict, Optional
-
 import torch
-from src import utils
-from src.run_manager import RunManager
 from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from src import utils
+from src.run_manager import RunManager
 
-def train_step(model: nn.Module,
-               dataloader: DataLoader,
-               loss_fn: nn.modules.loss._Loss | nn.Module,
-               optimizer: Optimizer,
-               k_top: int,
-               run_manager: RunManager,
-               log_interval: int,
-               epoch: int,
-               device: str) -> dict[str, float]:
+
+def train_step(
+    model: nn.Module,
+    dataloader: DataLoader,
+    loss_fn: nn.modules.loss._Loss | nn.Module,
+    optimizer: Optimizer,
+    k_top: int,
+    run_manager: RunManager,
+    log_interval: int,
+    epoch: int,
+    device: str,
+) -> dict[str, float]:
     model.train()
     train_loss = 0
     num_correct = 0
     num_predictions = 0
 
-    for batch, (X, y) in tqdm(enumerate(dataloader), total=len(dataloader), desc="Train Step", leave=False):
-
+    for batch, (X, y) in tqdm(
+        enumerate(dataloader), total=len(dataloader), desc="Train Step", leave=False
+    ):
         X, y = X.to(device), y.to(device)
 
         y_pred = model(X)
@@ -39,23 +41,29 @@ def train_step(model: nn.Module,
         num_predictions += len(y)
 
         if batch != 0 and batch % log_interval == 0:
-            run_manager.log_metrics({"train/loss": loss.item(),
-                                     "train/accuracy": num_correct / num_predictions}, epoch + batch / len(dataloader))
+            run_manager.log_metrics(
+                {
+                    "train/loss": loss.item(),
+                    "train/accuracy": num_correct / num_predictions,
+                },
+                epoch + batch / len(dataloader),
+            )
             num_correct = 0
             num_predictions = 0
 
-    train_loss = train_loss/len(dataloader)
+    train_loss = train_loss / len(dataloader)
     top_k_accuracy = num_correct / num_predictions
 
     return {"loss": train_loss, "top_k_accuracy": top_k_accuracy}
 
 
-def test_step(model: nn.Module,
-              dataloader: DataLoader,
-              loss_fn: nn.modules.loss._Loss | nn.Module,
-              k_top: int,
-              device: str) -> dict[str, float]:
-
+def test_step(
+    model: nn.Module,
+    dataloader: DataLoader,
+    loss_fn: nn.modules.loss._Loss | nn.Module,
+    k_top: int,
+    device: str,
+) -> dict[str, float]:
     model.eval()
 
     test_loss = 0
@@ -63,8 +71,9 @@ def test_step(model: nn.Module,
     num_predictions = 0
 
     with torch.inference_mode():
-
-        for batch, (X, y) in tqdm(enumerate(dataloader), total=len(dataloader), desc="Test Step", leave=False):
+        for batch, (X, y) in tqdm(
+            enumerate(dataloader), total=len(dataloader), desc="Test Step", leave=False
+        ):
             X, y = X.to(device), y.to(device)
 
             test_pred_logits = model(X)
@@ -72,8 +81,7 @@ def test_step(model: nn.Module,
             loss = loss_fn(test_pred_logits, y)
             test_loss += loss.item()
 
-            num_correct += utils.count_top_k_correct(
-                test_pred_logits, y, k_top)
+            num_correct += utils.count_top_k_correct(test_pred_logits, y, k_top)
             num_predictions += len(y)
 
     test_loss = test_loss / len(dataloader)
@@ -82,19 +90,21 @@ def test_step(model: nn.Module,
     return {"loss": test_loss, "top_k_accuracy": top_k_accuracy}
 
 
-def train(model: torch.nn.Module,
-          train_dataloader: DataLoader,
-          val_dataloader: DataLoader,
-          lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
-          optimizer: torch.optim.Optimizer,
-          loss_fn: nn.modules.loss._Loss | nn.Module,
-          epoch_start: int,
-          epoch_end: int,
-          k_top: int,
-          run_manager: RunManager,
-          checkpoint_interval: int,
-          log_interval: int,
-          device: str):
+def train(
+    model: torch.nn.Module,
+    train_dataloader: DataLoader,
+    val_dataloader: DataLoader,
+    lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
+    optimizer: torch.optim.Optimizer,
+    loss_fn: nn.modules.loss._Loss | nn.Module,
+    epoch_start: int,
+    epoch_end: int,
+    k_top: int,
+    run_manager: RunManager,
+    checkpoint_interval: int,
+    log_interval: int,
+    device: str,
+):
     """
     Train a PyTorch model.
 
@@ -115,24 +125,36 @@ def train(model: torch.nn.Module,
 
     """
     run_manager.log_metrics(
-        {"learning_rate": optimizer.param_groups[0]['lr']}, epoch_start)
+        {"learning_rate": optimizer.param_groups[0]["lr"]}, epoch_start
+    )
 
     for epoch in tqdm(range(epoch_start, epoch_end), desc="Epochs"):
-
         train_step_dict = train_step(
-            model, train_dataloader, loss_fn, optimizer, k_top, run_manager, log_interval, epoch, device)
-        val_step_dict = test_step(
-            model, val_dataloader, loss_fn, k_top, device)
+            model,
+            train_dataloader,
+            loss_fn,
+            optimizer,
+            k_top,
+            run_manager,
+            log_interval,
+            epoch,
+            device,
+        )
+        val_step_dict = test_step(model, val_dataloader, loss_fn, k_top, device)
 
-        run_manager.log_metrics({"train/loss": train_step_dict["loss"],
-                                 "val/loss": val_step_dict["loss"],
-                                 "train/accuracy": train_step_dict["top_k_accuracy"],
-                                 "val/accuracy": val_step_dict["top_k_accuracy"],
-                                 "learning_rate": optimizer.param_groups[0]["lr"]
-                                 }, epoch+1)
+        run_manager.log_metrics(
+            {
+                "train/loss": train_step_dict["loss"],
+                "val/loss": val_step_dict["loss"],
+                "train/accuracy": train_step_dict["top_k_accuracy"],
+                "val/accuracy": val_step_dict["top_k_accuracy"],
+                "learning_rate": optimizer.param_groups[0]["lr"],
+            },
+            epoch + 1,
+        )
 
         # saves model/epoch_5 at the end of epoch 5. epochs are 0 indexed.
-        if (epoch % checkpoint_interval == 0 or epoch == epoch_end - 1):
+        if epoch % checkpoint_interval == 0 or epoch == epoch_end - 1:
             run_manager.save_model(model, epoch)
 
         lr_scheduler.step()

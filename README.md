@@ -32,5 +32,5 @@ python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.
 ## To train YOLO on GPU
 
 ```
-python train_yolo.py --num_epochs 10 --batch_size 512 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name yolo_trial_run_on_gpu --device cuda
+python train_yolo.py --num_epochs 10 --batch_size 512 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name yolo_finetune --device cuda --continue_from_checkpoint_signature IM-122:checkpoints/epoch_14
 ```

@@ -1,12 +1,8 @@
-import io
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict
 
-import matplotlib.pyplot as plt
 import neptune
-import PIL.Image as Image
 import torch
 import yaml
 
@@ -14,12 +10,18 @@ config = yaml.safe_load(open("config.yaml"))
 
 
 class RunManager:
-    '''
+    """
     The job of the run manager is to manage experiment runs. It integrates
-    '''
+    """
 
-    def __init__(self, *, new_run_name: str | None = None, load_from_run_id: str | None = None, tags: list[str] = [], source_files: list[str] = []):
-
+    def __init__(
+        self,
+        *,
+        new_run_name: str | None = None,
+        load_from_run_id: str | None = None,
+        tags: list[str] = [],
+        source_files: list[str] = [],
+    ):
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
 
@@ -29,7 +31,7 @@ class RunManager:
             api_token=config["neptune_api_token"],
             name=new_run_name,
             source_files=source_files,
-            tags=tags
+            tags=tags,
         )
 
     def add_tags(self, tags: list[str]) -> None:
@@ -44,7 +46,9 @@ class RunManager:
         """
         self.run["sys/tags"].add(tags)
 
-    def set_checkpoint_to_continue_from(self, checkpoint_to_continue_from_signature: str) -> None:
+    def set_checkpoint_to_continue_from(
+        self, checkpoint_to_continue_from_signature: str
+    ) -> None:
         """
         Set the checkpoint to continue from.
 
@@ -52,7 +56,10 @@ class RunManager:
           checkpoint_to_continue_from_signature: a string in the format RunId:CheckpointPath
         """
         self.log_data(
-            {"checkpoint_to_continue_from_signature": checkpoint_to_continue_from_signature})
+            {
+                "checkpoint_to_continue_from_signature": checkpoint_to_continue_from_signature
+            }
+        )
 
     def log_data(self, data: Dict[str, Any]) -> None:
         """
@@ -171,10 +178,13 @@ def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
     Example usage:
         load_model(model=model_0, epoch=5)
     """
-    assert ":" in checkpoint_signature, "checkpoint_signature should be in the format RunId:CheckpointPath"
+    assert (
+        ":" in checkpoint_signature
+    ), "checkpoint_signature should be in the format RunId:CheckpointPath"
     run_id, checkpoint_path = checkpoint_signature.split(":")
     assert not checkpoint_path.endswith(
-        ".pth"), "checkpoint_path should not end with .pth"
+        ".pth"
+    ), "checkpoint_path should not end with .pth"
 
     # save to temp_dir/{file_name}.pth
     temp_dir = Path("temp")
@@ -183,13 +193,13 @@ def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
         project="towards-hi/image-classification",
         with_id=run_id,
         mode="read-only",
-        api_token=config["neptune_api_token"])
+        api_token=config["neptune_api_token"],
+    )
     run[checkpoint_path].download(destination=str(temp_dir))
 
     # load from temp_dir/{file_name}.pth into model
     file_name = checkpoint_path.split("/")[-1]
-    params = torch.load(temp_dir/f"{file_name}.pth",
-                        map_location=torch.device('cpu'))
+    params = torch.load(temp_dir / f"{file_name}.pth", map_location=torch.device("cpu"))
     model.load_state_dict(params)
 
     # file_name should be epoch_{epoch}.pth
@@ -199,7 +209,7 @@ def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
     # we should start logging from the next epoch
     start_epoch = epoch_number + 1
 
-    print('this is epoch_number', epoch_number)
+    print("this is epoch_number", epoch_number)
 
     try:
         shutil.rmtree(temp_dir)

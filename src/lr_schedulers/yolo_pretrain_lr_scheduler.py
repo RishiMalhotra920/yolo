@@ -2,19 +2,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.optim as optim
-from torch.optim.lr_scheduler import (ConstantLR, ExponentialLR, LambdaLR,
-                                      SequentialLR, _LRScheduler)
+from torch.optim.lr_scheduler import (
+    _LRScheduler,
+)
 
 # Define the custom learning rate schedule
 
 
 class CustomExponentialLR(_LRScheduler):
     """
-    It increases the learning rate exponentially from 0.001 to 0.01 in 10 epochs 
+    It increases the learning rate exponentially from 0.001 to 0.01 in 10 epochs
     and then keeps it constant at 0.01 for the remaining epochs.
     """
 
-    def __init__(self, optimizer, init_lr, final_growth_lr, growth_epochs, decay_epochs, floor_lr, last_epoch=-1):
+    def __init__(
+        self,
+        optimizer,
+        init_lr,
+        final_growth_lr,
+        growth_epochs,
+        decay_epochs,
+        floor_lr,
+        last_epoch=-1,
+    ):
         self.init_lr = init_lr
         self.final_lr = final_growth_lr
         self.growth_epochs = growth_epochs
@@ -28,12 +38,20 @@ class CustomExponentialLR(_LRScheduler):
         # self.last_epoch is the last epoch. it is updated by the base class.
         print(self.last_epoch)
         if self.last_epoch < self.growth_epochs:
-            return [base_lr * (self.growth_factor ** self.last_epoch) for base_lr in self.base_lrs]
+            return [
+                base_lr * (self.growth_factor**self.last_epoch)
+                for base_lr in self.base_lrs
+            ]
         elif self.last_epoch < self.growth_epochs + self.decay_epochs:
-            print("Decay", self.last_epoch, self.growth_epochs,
-                  self.final_lr ** (self.last_epoch - self.growth_epochs))
-            exp_lr = self.final_lr * \
-                np.exp(-0.25 * (self.last_epoch - self.growth_epochs))
+            print(
+                "Decay",
+                self.last_epoch,
+                self.growth_epochs,
+                self.final_lr ** (self.last_epoch - self.growth_epochs),
+            )
+            exp_lr = self.final_lr * np.exp(
+                -0.25 * (self.last_epoch - self.growth_epochs)
+            )
             exp_lr_with_floor = max(exp_lr, self.floor_lr)
             return [exp_lr_with_floor for base_lr in self.base_lrs]
 
@@ -46,7 +64,13 @@ def get_custom_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     and then keeps it constant at 0.01 for the remaining epochs.
     """
     scheduler = CustomExponentialLR(
-        optimizer, init_lr=0.0007, final_growth_lr=0.0007, growth_epochs=2, decay_epochs=20, floor_lr=0.0001)
+        optimizer,
+        init_lr=0.0007,
+        final_growth_lr=0.0007,
+        growth_epochs=2,
+        decay_epochs=20,
+        floor_lr=0.0001,
+    )
     return scheduler
 
 
@@ -54,7 +78,7 @@ def get_fixed_lr_scheduler(optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda _: 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test the learning rate schedule above
     model = torch.nn.Linear(10, 2)
     initial_lr = 0.0007
@@ -79,7 +103,7 @@ if __name__ == '__main__':
         learning_rates.append(scheduler.get_last_lr()[0])
 
     plt.figure(figsize=(20, 10))
-    plt.plot(learning_rates, marker='o')  # 'o' marker to show points
+    plt.plot(learning_rates, marker="o")  # 'o' marker to show points
 
     # Setting x-ticks to only integers
     # Assuming the epochs are the indices of the list
@@ -87,11 +111,13 @@ if __name__ == '__main__':
 
     # Annotating y-values on the line
     for i, lr in enumerate(learning_rates):
-        plt.annotate(f'{lr:.5f}',  # Formatting to 3 decimal places
-                     (i, lr),
-                     textcoords="offset points",  # Positioning text
-                     xytext=(0, 10),  # Distance from text to points (x,y)
-                     ha='center')  # Horizontal alignment can be left, right or center
+        plt.annotate(
+            f"{lr:.5f}",  # Formatting to 3 decimal places
+            (i, lr),
+            textcoords="offset points",  # Positioning text
+            xytext=(0, 10),  # Distance from text to points (x,y)
+            ha="center",
+        )  # Horizontal alignment can be left, right or center
 
     plt.xlabel("Epoch")
     plt.ylabel("Learning Rate")

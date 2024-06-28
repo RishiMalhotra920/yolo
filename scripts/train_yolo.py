@@ -5,18 +5,19 @@ import sys
 import torch
 import yaml
 
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
 
-import color_code_error_messages
+from torchvision.transforms import v2 as transforms_v2
+
 from src.data_setup import yolo_train_data_setup
 from src.loss_functions.yolo_loss_function import YOLOLoss
 from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
-    get_custom_lr_scheduler, get_fixed_lr_scheduler)
+    get_custom_lr_scheduler,
+    get_fixed_lr_scheduler,
+)
 from src.models import yolo_net
 from src.run_manager import RunManager, load_checkpoint
 from src.trainers import yolo_trainer
-from torchvision.transforms import v2 as transforms_v2
 
 config = yaml.safe_load(open("config.yaml"))
 
@@ -31,7 +32,6 @@ config = yaml.safe_load(open("config.yaml"))
 
 
 def train(args) -> None:
-
     # Setup target device
     assert args.device in ["cpu", "cuda"], "Invalid device"
 
@@ -40,17 +40,20 @@ def train(args) -> None:
 
     # yolo uses 448x448 images
     # Create transforms
-    data_transform = transforms_v2.Compose([
-        # transforms.RandomResizedCrop(50),
-        transforms_v2.Resize((448, 448)),
-        transforms_v2.RandomHorizontalFlip(),
-        transforms_v2.RandomRotation((-30, 30)),
-        transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-        transforms_v2.ToTensor(),
-        transforms_v2.Normalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225]),
-        # transforms.RandomErasing()
-    ])
+    data_transform = transforms_v2.Compose(
+        [
+            # transforms.RandomResizedCrop(50),
+            transforms_v2.Resize((448, 448)),
+            transforms_v2.RandomHorizontalFlip(),
+            transforms_v2.RandomRotation((-30, 30)),
+            transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+            transforms_v2.ToTensor(),
+            transforms_v2.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+            # transforms.RandomErasing()
+        ]
+    )
 
     cpu_count = os.cpu_count()
     num_workers = cpu_count if cpu_count is not None else 0
@@ -60,24 +63,31 @@ def train(args) -> None:
         root_dir=config["pascal_voc_root_dir"],
         transform=data_transform,
         batch_size=args.batch_size,
-        num_workers=num_workers
+        num_workers=num_workers,
     )
     # print('input data shape is', next(iter(train_dataloader))[0].shape)
     # input()
 
     # Create model with help from model_builder.py
-    model = yolo_net.YOLONet(
-        dropout=args.dropout).to(args.device)
+    model = yolo_net.YOLONet(dropout=args.dropout).to(args.device)
 
-    run_manager = RunManager(new_run_name=args.run_name, source_files=[
-                             "lr_schedulers/*.py", "models/*.py", "trainers/*.py", "pretrain_yolo.py"])
+    run_manager = RunManager(
+        new_run_name=args.run_name,
+        source_files=[
+            "lr_schedulers/*.py",
+            "models/*.py",
+            "trainers/*.py",
+            "pretrain_yolo.py",
+        ],
+    )
     if args.continue_from_checkpoint_signature is not None:
         epoch_start = load_checkpoint(
-            model, checkpoint_signature=args.continue_from_checkpoint_signature)
-        run_manager.add_tags(
-            ["run_continuation"])
+            model, checkpoint_signature=args.continue_from_checkpoint_signature
+        )
+        run_manager.add_tags(["run_continuation"])
         run_manager.set_checkpoint_to_continue_from(
-            args.continue_from_checkpoint_signature)
+            args.continue_from_checkpoint_signature
+        )
     else:
         epoch_start = 0
 
@@ -91,8 +101,7 @@ def train(args) -> None:
 
     loss_fn = YOLOLoss()
 
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     if args.lr_scheduler == "custom":
         lr_scheduler = get_custom_lr_scheduler(optimizer)
@@ -102,9 +111,9 @@ def train(args) -> None:
     for epoch in range(epoch_start):
         # step the lr_scheduler to match with the current_epoch
         lr_scheduler.step()
-        print("epoch", epoch, "lr", optimizer.param_groups[0]['lr'])
+        print("epoch", epoch, "lr", optimizer.param_groups[0]["lr"])
 
-    print('this is lr_scheduler current lr', optimizer.param_groups[0]['lr'])
+    print("this is lr_scheduler current lr", optimizer.param_groups[0]["lr"])
 
     parameters = {
         "num_epochs": args.num_epochs,
@@ -116,63 +125,107 @@ def train(args) -> None:
         "dropout": args.dropout,
     }
 
-    run_manager.log_data({"parameters": parameters,
-                          "model/summary": str(model),
-                          })
+    run_manager.log_data(
+        {
+            "parameters": parameters,
+            "model/summary": str(model),
+        }
+    )
 
-    yolo_trainer.train(model=model,
-                       train_dataloader=train_dataloader,
-                       val_dataloader=test_dataloader,
-                       lr_scheduler=lr_scheduler,
-                       optimizer=optimizer,
-                       loss_fn=loss_fn,
-                       epoch_start=epoch_start,
-                       epoch_end=epoch_start + args.num_epochs,
-                       k_top=5,
-                       run_manager=run_manager,
-                       checkpoint_interval=args.checkpoint_interval,
-                       log_interval=args.log_interval,
-                       device=args.device)
+    yolo_trainer.train(
+        model=model,
+        train_dataloader=train_dataloader,
+        val_dataloader=test_dataloader,
+        lr_scheduler=lr_scheduler,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        epoch_start=epoch_start,
+        epoch_end=epoch_start + args.num_epochs,
+        k_top=5,
+        run_manager=run_manager,
+        checkpoint_interval=args.checkpoint_interval,
+        log_interval=args.log_interval,
+        device=args.device,
+    )
 
     run_manager.end_run()
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
-        prog='Computer Vision Model Trainer',
-        description='Trains a computer vision model for image classification',
-        epilog='Enjoy the program! :)')
+        prog="Computer Vision Model Trainer",
+        description="Trains a computer vision model for image classification",
+        epilog="Enjoy the program! :)",
+    )
 
-    parser.add_argument('--num_epochs', type=int, required=True,
-                        help='Number of epochs to train the model')
-    parser.add_argument('--batch_size', type=int, required=True,
-                        help='Batch size for training the model')
-    parser.add_argument('--lr_scheduler', type=str, required=True,
-                        help='Scheduler for the optimizer or custom')
-    parser.add_argument('--lr', type=float, required=True,
-                        help='Learning rate for fixed scheduler or starting learning rate for custom scheduler')
-    parser.add_argument('--dropout', type=float, required=True,
-                        help='Dropout rate for the model')
+    parser.add_argument(
+        "--num_epochs",
+        type=int,
+        required=True,
+        help="Number of epochs to train the model",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        required=True,
+        help="Batch size for training the model",
+    )
+    parser.add_argument(
+        "--lr_scheduler",
+        type=str,
+        required=True,
+        help="Scheduler for the optimizer or custom",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        required=True,
+        help="Learning rate for fixed scheduler or starting learning rate for custom scheduler",
+    )
+    parser.add_argument(
+        "--dropout", type=float, required=True, help="Dropout rate for the model"
+    )
     # parser.add_argument('--num_workers', type=int, required=True,
     # help='Number of workers for the dataloader. Eight for your macbook. Number of cores for your gpu')
 
-    parser.add_argument('--run_name', type=str, required=False,
-                        help='A name for the run')
-    parser.add_argument('--checkpoint_interval', type=int, default=1,
-                        help='The number of epochs to wait before saving model checkpoint')
-    parser.add_argument('--continue_from_checkpoint_signature', type=str, default=None,
-                        help='Checkpoint signature for the run continue training from in the format: RunId:CheckpointPath eg: IM-23:checkpoints/epoch_10.pth')
+    parser.add_argument(
+        "--run_name", type=str, required=False, help="A name for the run"
+    )
+    parser.add_argument(
+        "--checkpoint_interval",
+        type=int,
+        default=1,
+        help="The number of epochs to wait before saving model checkpoint",
+    )
+    parser.add_argument(
+        "--continue_from_checkpoint_signature",
+        type=str,
+        default=None,
+        help="Checkpoint signature for the run continue training from in the format: RunId:CheckpointPath eg: IM-23:checkpoints/epoch_10.pth",
+    )
 
-    parser.add_argument('--log_interval', type=int, default=10,
-                        help='The number of batches to wait before logging training status')
+    parser.add_argument(
+        "--log_interval",
+        type=int,
+        default=10,
+        help="The number of batches to wait before logging training status",
+    )
 
-    parser.add_argument('--device', type=str, default="cpu",
-                        help='Device to train the model on')
-    parser.add_argument('--train_dir', type=str, default=f'{config["image_net_data_dir"]}/train',
-                        help='Directory containing training data')
-    parser.add_argument('--val_dir', type=str, default=f'{config["image_net_data_dir"]}/val',
-                        help='Directory containing validation data')
+    parser.add_argument(
+        "--device", type=str, default="cpu", help="Device to train the model on"
+    )
+    parser.add_argument(
+        "--train_dir",
+        type=str,
+        default=f'{config["image_net_data_dir"]}/train',
+        help="Directory containing training data",
+    )
+    parser.add_argument(
+        "--val_dir",
+        type=str,
+        default=f'{config["image_net_data_dir"]}/val',
+        help="Directory containing validation data",
+    )
 
     args = parser.parse_args()
 
@@ -183,10 +236,10 @@ if __name__ == "__main__":
     try:
         if args.run_name is None:
             inp = input(
-                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}:{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: ")
+                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}:{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: "
+            )
         else:
-            inp = input(
-                f"Confirm that run_name is {args.run_name}: yes or no: ")
+            inp = input(f"Confirm that run_name is {args.run_name}: yes or no: ")
 
         if inp.lower() != "yes":
             raise Exception("Type yes on input...")
