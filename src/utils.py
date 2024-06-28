@@ -206,7 +206,6 @@ def predict_on_random_pascal_voc_images(
 
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
 
-    images = []
     for i, index in enumerate(random_samples_idx):
         image, annotations = dataset[index]
         ax = axes[i]
@@ -265,7 +264,6 @@ def predict_on_random_image_net_images(
 
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
 
-    images = []
     for i, index in enumerate(random_samples_idx):
         image, label = dataset[index]
         ax = axes[i]

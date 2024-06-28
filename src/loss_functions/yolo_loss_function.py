@@ -14,7 +14,7 @@ class YOLOLoss(nn.Module):
     def forward(self, preds: torch.Tensor, labels: torch.Tensor):
         bs = preds.shape[0]  # batch size
         B = 2
-        C = 20
+        # C = 20
         S = 7
 
         # TODO; maybe you can initialize these as zero tensors and then assign them.

@@ -1,10 +1,9 @@
+import torchvision.datasets as datasets
 import yaml
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import v2 as transforms_v2
 
 config = yaml.safe_load(open("config.yaml"))
-
-import torchvision.datasets as datasets
 
 
 def create_datasets(
