@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   lint:
@@ -20,6 +20,8 @@ jobs:
     - name: Run linting and formatting
       run: |
         # run a linting check
+        echo "Linting..."
         ruff check
         # run a formatting check
+        echo "Formatting..."
         ruff format --check
