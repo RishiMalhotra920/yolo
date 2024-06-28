@@ -25,3 +25,9 @@ jobs:
         # run a formatting check
         echo "Formatting..."
         ruff format --check
+    
+    - name: Run type checking
+      run: |
+        echo "Type checking..."
+        mypy .
+        

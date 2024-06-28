@@ -20,7 +20,7 @@ def train_step(
     device: str,
 ) -> dict[str, float]:
     model.train()
-    train_loss = 0
+    train_loss = 0.0
     num_correct = 0
     num_predictions = 0
 
@@ -66,7 +66,7 @@ def test_step(
 ) -> dict[str, float]:
     model.eval()
 
-    test_loss = 0
+    test_loss = 0.0
     num_correct = 0
     num_predictions = 0
 

@@ -8,7 +8,7 @@ class TinyVGG(nn.Module):
         ~1.6M parameters
         """
         super(TinyVGG, self).__init__()
-        assert False, "should set padding to all conv layers with kernel size"
+        # TODO: "should set padding to all conv layers with kernel size"
         num_channels = hidden_units
 
         self.block_1 = nn.Sequential(
