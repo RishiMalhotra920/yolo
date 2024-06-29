@@ -74,9 +74,7 @@ def load_checkpoint(model: torch.nn.Module, checkpoint_signature: str) -> int:
 
     temp_dir, file_name = download_checkpoint(checkpoint_signature)
 
-    params = torch.load(
-        temp_dir / f"{file_name}.pth"
-    )  # , map_location=torch.device("cpu"))
+    params = torch.load(temp_dir / f"{file_name}.pth", map_location=torch.device("cpu"))
     model.load_state_dict(params)
     # file_name should be epoch_{epoch}.pth
     epoch_number = int(file_name.split("_")[1])
@@ -101,9 +99,7 @@ def load_checkpoint_for_yolo_from_pretrained_image_net_model(
     load the weights for Feature Extractor from pretrained model and random initialize the rest
     """
     temp_dir, file_name = download_checkpoint(checkpoint_signature)
-    params = torch.load(
-        temp_dir / f"{file_name}.pth"
-    )  # , map_location=torch.device("cpu"))
+    params = torch.load(temp_dir / f"{file_name}.pth", map_location=torch.device("cpu"))
     model_dict = model.state_dict()
     # model.load_state_dict(params)
     # 1. filter out keys in pretrained model not in current model
