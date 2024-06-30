@@ -34,3 +34,11 @@ python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.
 ```
 python train_yolo.py --num_epochs 10 --batch_size 512 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name yolo_finetune --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14
 ```
+
+## To run training tasks with the python train queue
+
+Update the train_queue.yaml file and run the command:
+
+```
+python start_train_queue.py
+```

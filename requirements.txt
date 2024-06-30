@@ -6,5 +6,6 @@ torchinfo
 numpy
 matplotlib
 tqdm
+aiohttp
 # have done some funky run cloning stuff
 neptune==1.10.4
