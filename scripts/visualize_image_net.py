@@ -9,9 +9,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 
 from torchvision.transforms import v2 as transforms_v2
 
+from src.checkpoint_loader import load_checkpoint
 from src.data_setup import yolo_pretrain_data_setup
 from src.models import yolo_net
-from src.run_manager import load_checkpoint
 from src.utils import predict_on_random_image_net_images
 
 config = yaml.safe_load(open("config.yaml"))

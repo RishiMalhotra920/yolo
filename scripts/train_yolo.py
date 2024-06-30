@@ -73,7 +73,7 @@ def train(args) -> None:
     # input()
 
     # Create model with help from model_builder.py
-    model = yolo_net.YOLONet(dropout=args.dropout).to(args.device)
+    yolo_net_model = yolo_net.YOLONet(dropout=args.dropout).to(args.device)
 
     run_manager = RunManager(
         new_run_name=args.run_name,
@@ -86,7 +86,8 @@ def train(args) -> None:
     )
     # if args.device == "cuda":
     # do this even on cpu to figure out if the model on the gpu is working.
-    model = torch.nn.DataParallel(model)
+    # going forward, save the weights without the nn.DataParallel?
+    model = torch.nn.DataParallel(yolo_net_model)
 
     if args.continue_from_yolo_checkpoint_signature is not None:
         epoch_start = load_checkpoint(
@@ -256,16 +257,6 @@ if __name__ == "__main__":
     assert args.lr_scheduler in ["custom", "fixed"], "Invalid lr_scheduler"
 
     try:
-        if args.run_name is None:
-            inp = input(
-                f"Confirm that you want to continue training from {args.continue_from_checkpoint_run_id}:{args.continue_from_checkpoint_path} and log the run to {args.continue_from_checkpoint_run_id}: yes or no: "
-            )
-        else:
-            inp = input(f"Confirm that run_name is {args.run_name}: yes or no: ")
-
-        if inp.lower() != "yes":
-            raise Exception("Type yes on input...")
-
         print("Starting training for run_name:", args.run_name)
         train(args)
 

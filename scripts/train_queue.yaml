@@ -1,0 +1,12 @@
+tasks:
+  - name: Train command 1
+    git_checkout_target: yolo_architecture
+    run: |
+      # echo "hello world"
+      python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name train_scheduler_run
+
+  - name: Train command 2
+    git_checkout_target: yolo_architecture
+    run: |
+      echo "hello world 2"
+      # python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name train_scheduler_run_2
