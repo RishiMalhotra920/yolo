@@ -12,4 +12,6 @@ setup.sh
 **/.neptune/
 **/temp/
 *.ipynb
+**/.mypy_cache/
+**/.ruff_cache/
 .DS_Store

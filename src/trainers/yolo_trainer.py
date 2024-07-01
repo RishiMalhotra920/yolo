@@ -13,12 +13,11 @@ def train_step(
     dataloader: DataLoader,
     loss_fn: nn.modules.loss._Loss | nn.Module,
     optimizer: Optimizer,
-    k_top: int,
     run_manager: RunManager,
     log_interval: int,
     epoch: int,
     device: str,
-) -> dict[str, float]:
+) -> None:
     model.train()
     train_loss = 0
     num_correct = 0
@@ -43,7 +42,6 @@ def train_step(
 
         result_dict = utils.get_yolo_metrics(y_pred, y)
 
-        # num_correct += utils.count_top_k_correct(y_pred, y, k_top)
         num_correct += result_dict["num_correct"]
         num_incorrect_localization += result_dict["num_incorrect_localization"]
         num_incorrect_other += result_dict["num_incorrect_other"]
@@ -56,6 +54,12 @@ def train_step(
                 {
                     "train/loss": loss.item(),
                     "train/accuracy": num_correct / num_predictions,
+                    "train/percent_incorrect_localization": num_incorrect_localization
+                    / num_predictions,
+                    "train/percent_incorrect_other": num_incorrect_other
+                    / num_predictions,
+                    "train/percent_incorrect_background": num_incorrect_background
+                    / num_predictions,
                 },
                 epoch + batch / len(dataloader),
             )
@@ -66,22 +70,15 @@ def train_step(
             num_incorrect_background = 0
             num_predictions = 0
 
-    return {
-        "loss": train_loss / len(dataloader),
-        "accuracy": num_correct / num_predictions,
-        "num_incorrect_localization": num_incorrect_localization / num_predictions,
-        "num_incorrect_other": num_incorrect_other / num_predictions,
-        "num_incorrect_background": num_incorrect_background / num_predictions,
-    }
-
 
 def test_step(
     model: nn.Module,
     dataloader: DataLoader,
     loss_fn: nn.modules.loss._Loss | nn.Module,
-    k_top: int,
+    run_manager: RunManager,
+    epoch: int,
     device: str,
-) -> dict[str, float]:
+) -> None:
     model.eval()
 
     test_loss = 0
@@ -111,13 +108,18 @@ def test_step(
 
             num_predictions += len(y)
 
-    return {
-        "loss": test_loss / len(dataloader),
-        "accuracy": num_correct / num_predictions,
-        "num_incorrect_localization": num_incorrect_localization / num_predictions,
-        "num_incorrect_other": num_incorrect_other / num_predictions,
-        "num_incorrect_background": num_incorrect_background / num_predictions,
-    }
+    run_manager.log_metrics(
+        {
+            "test/loss": test_loss / len(dataloader),
+            "test/accuracy": num_correct / num_predictions,
+            "test/percent_incorrect_localization": num_incorrect_localization
+            / num_predictions,
+            "test/percent_incorrect_other": num_incorrect_other / num_predictions,
+            "test/percent_incorrect_background": num_incorrect_background
+            / num_predictions,
+        },
+        epoch,
+    )
 
 
 def train(
@@ -129,7 +131,6 @@ def train(
     loss_fn: nn.modules.loss._Loss | nn.Module,
     epoch_start: int,
     epoch_end: int,
-    k_top: int,
     run_manager: RunManager,
     checkpoint_interval: int,
     log_interval: int,
@@ -147,7 +148,6 @@ def train(
         loss_fn: A PyTorch loss function to use for training.
         epoch_start: The starting epoch for training.
         epoch_end: The ending epoch for training.
-        k_top: The value of k for top-k accuracy calculation.
         run_manager: An instance of the RunManager class for logging metrics.
         checkpoint_interval: The interval at which to save model checkpoints.
         log_interval: The interval at which to log metrics.
@@ -159,27 +159,20 @@ def train(
     )
 
     for epoch in tqdm(range(epoch_start, epoch_end), desc="Epochs"):
-        train_step_dict = train_step(
+        train_step(
             model,
             train_dataloader,
             loss_fn,
             optimizer,
-            k_top,
             run_manager,
             log_interval,
             epoch,
             device,
         )
-        val_step_dict = test_step(model, val_dataloader, loss_fn, k_top, device)
+        test_step(model, val_dataloader, loss_fn, run_manager, epoch + 1, device)
 
         run_manager.log_metrics(
-            {
-                "train/loss": train_step_dict["loss"],
-                "val/loss": val_step_dict["loss"],
-                "train/accuracy": train_step_dict["accuracy"],
-                "val/accuracy": val_step_dict["accuracy"],
-                "learning_rate": optimizer.param_groups[0]["lr"],
-            },
+            {"learning_rate": optimizer.param_groups[0]["lr"]},
             epoch + 1,
         )
 

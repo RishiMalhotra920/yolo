@@ -1,3 +1,5 @@
+import glob
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict
@@ -7,6 +9,15 @@ import torch
 import yaml
 
 config = yaml.safe_load(open("config.yaml"))
+
+
+def assert_filepaths_exist(base_path, file_patterns):
+    for pattern in file_patterns:
+        full_pattern = os.path.join(base_path, pattern)
+        matched_files = glob.glob(full_pattern)
+        assert len(matched_files) > 0, f"No files found for pattern: {pattern}"
+        for file in matched_files:
+            assert os.path.exists(file), f"File does not exist: {file}"
 
 
 class RunManager:
@@ -22,10 +33,15 @@ class RunManager:
         tags: list[str] = [],
         source_files: list[str] = [],
     ):
+        assert new_run_name is not None, "new_run_name should not be None"
+
+        base_path = os.getcwd()
+        print("this is base path", base_path)
+        assert_filepaths_exist(base_path, source_files)
+
         self.temp_dir = Path("temp")
         self.temp_dir.mkdir(exist_ok=True)
 
-        assert new_run_name is not None, "new_run_name should not be None"
         self.run = neptune.init_run(
             project="towards-hi/image-classification",
             api_token=config["neptune_api_token"],
