@@ -36,6 +36,7 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
     grid_cell_to_class = [[-1 for _ in range(grid_size)] for _ in range(grid_size)]
     grid_cell_to_num_bboxes = [[0 for _ in range(grid_size)] for _ in range(grid_size)]
 
+    # you actually don't need to scale anything to the 448*448 dimension space.
     for object in objects:
         # normalize the bounding box coordinates
         x_min, x_max = int(object["bndbox"]["xmin"]), int(object["bndbox"]["xmax"])
@@ -67,6 +68,7 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
             grid_cell_to_class[grid_x][grid_y] = class_index
             grid_cells[grid_x, grid_y, B * 5 :] = one_hot
 
+        print("object", grid_x, grid_y, x, y, width, height, confidence)
         # if the class label is not set or class label is the same as the one already set, then set bounding box coordinates.
         num_bboxes_per_grid_cell = grid_cell_to_num_bboxes[grid_x][grid_y]
         if (
@@ -124,75 +126,3 @@ def create_dataloaders(
     )
 
     return train_data_loader, val_data_loader
-
-
-if __name__ == "__main__":
-    data_transform = transforms_v2.Compose(
-        [
-            transforms_v2.Resize((448, 448)),
-            transforms_v2.RandomHorizontalFlip(),
-            transforms_v2.RandomAffine(
-                degrees=(0, 0), translate=(0.2, 0.2), scale=(0.8, 1.2)
-            ),
-            transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-            transforms_v2.ToTensor(),
-            transforms_v2.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),
-        ]
-    )
-
-    train_dataset, _ = create_datasets(
-        "/Users/rishimalhotra/projects/cv/image_classification/datasets",
-        data_transform,
-        yolo_target_transform,
-    )
-
-    print("image shape", train_dataset[0][0].shape)
-    print("target", train_dataset[0][1])
-
-    a = {
-        "annotation": {
-            "folder": "VOC2012",
-            "filename": "2008_000008.jpg",
-            "source": {
-                "database": "The VOC2008 Database",
-                "annotation": "PASCAL VOC2008",
-                "image": "flickr",
-            },
-            "size": {"width": "500", "height": "442", "depth": "3"},
-            "segmented": "0",
-            "object": [
-                {
-                    "name": "horse",
-                    "pose": "Left",
-                    "truncated": "0",
-                    "occluded": "1",
-                    "bndbox": {
-                        "xmin": "53",
-                        "ymin": "87",
-                        "xmax": "471",
-                        "ymax": "420",
-                    },
-                    "difficult": "0",
-                },
-                {
-                    "name": "person",
-                    "pose": "Unspecified",
-                    "truncated": "1",
-                    "occluded": "0",
-                    "bndbox": {
-                        "xmin": "158",
-                        "ymin": "44",
-                        "xmax": "289",
-                        "ymax": "167",
-                    },
-                    "difficult": "0",
-                },
-            ],
-        }
-    }
-
-    # you're gonna have a separate transform for visualization anyways so youre good.
-
-    # label_transform =
