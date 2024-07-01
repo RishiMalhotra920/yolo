@@ -4,6 +4,32 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import torch
 
+VOC_CLASSES = [
+    "aeroplane",
+    "bicycle",
+    "bird",
+    "boat",
+    "bottle",
+    "bus",
+    "car",
+    "cat",
+    "chair",
+    "cow",
+    "diningtable",
+    "dog",
+    "horse",
+    "motorbike",
+    "person",
+    "pottedplant",
+    "sheep",
+    "sofa",
+    "train",
+    "tvmonitor",
+]
+
+class_to_index = {cls_name: idx for idx, cls_name in enumerate(VOC_CLASSES)}
+index_to_class = {idx: cls_name for idx, cls_name in enumerate(VOC_CLASSES)}
+
 
 def calculate_iou(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torch.Tensor:
     """
@@ -222,7 +248,7 @@ def predict_on_random_pascal_voc_images(
         #     ax.set_title(f"Label: {label}\nPred: {pred}")
 
         # Loop through the objects and draw each one
-        print("annotations", dataset[index])
+        print("annotations", annotations)
         objects = annotations["annotation"]["object"]
         for obj in objects:
             bbox = obj["bndbox"]
@@ -244,6 +270,89 @@ def predict_on_random_pascal_voc_images(
                 fontsize=12,
                 bbox=dict(facecolor="red", alpha=0.5),
             )
+
+        # predictions
+
+        print("this is image shape", image.unsqueeze(0).shape)
+        preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
+        print("preds", preds)
+        # get the predicted bounding boxes
+
+        image_width = 448
+        grid_cell_size = image_width / 7
+        preds_grid_cell_x_pixel_start_coordinates = (
+            torch.arange(0, 7) * image_width / 7
+        ).repeat(7, 1)  # (7, 7)
+        preds_grid_cell_y_pixel_start_coordinates = (
+            preds_grid_cell_x_pixel_start_coordinates.T
+        )  # (7, 7)
+
+        # bbox 1
+        preds[..., 0] = preds_grid_cell_x_pixel_start_coordinates + (
+            preds[..., 0] * grid_cell_size
+        )
+        preds[..., 1] = preds_grid_cell_y_pixel_start_coordinates + (
+            preds[..., 1] * grid_cell_size
+        )
+
+        preds[..., 2] = preds[..., 2] * image_width
+        preds[..., 3] = preds[..., 3] * image_width
+        # preds[..., 4] is confidence
+
+        # bbox 2
+        preds[..., 5] = preds_grid_cell_x_pixel_start_coordinates + (
+            preds[..., 5] * grid_cell_size
+        )
+        preds[..., 6] = preds_grid_cell_y_pixel_start_coordinates + (
+            preds[..., 6] * grid_cell_size
+        )
+
+        preds[..., 7] = preds[..., 7] * image_width
+        preds[..., 8] = preds[..., 8] * image_width
+        # preds[..., 9] is confidence
+
+        confidence_threshold = 0.01
+
+        for grid_x in range(7):
+            for grid_y in range(7):
+                for b in range(2):
+                    confidence = preds[0, grid_x, grid_y, b * 5 + 4]
+                    print("this is confidence", confidence)
+                    if confidence > confidence_threshold:
+                        bbox = preds[0, grid_x, grid_y, b * 5 : b * 5 + 4]
+                        label_vec = preds[0, grid_x, grid_y, 10:]
+                        label_idx = int(torch.argmax(label_vec).item())
+
+                        label = index_to_class[label_idx]
+
+                        x_center = bbox[0].item()
+                        y_center = bbox[1].item()
+                        width = bbox[2].item()
+                        height = bbox[3].item()
+
+                        x = x_center - width / 2
+                        y = y_center - height / 2
+
+                        print("this is x, y, width, height", x, y, width, height)
+
+                        # Create a rectangle patch for each object and add it to the plot
+                        rect = patches.Rectangle(
+                            (x, y),
+                            width,
+                            height,
+                            linewidth=2,
+                            edgecolor="g",
+                            facecolor="none",
+                        )
+                        ax.add_patch(rect)
+                        ax.text(
+                            x,
+                            y - 10,
+                            label,
+                            color="white",
+                            fontsize=12,
+                            bbox=dict(facecolor="green", alpha=0.5),
+                        )
 
         ax.axis("off")
     plt.show()

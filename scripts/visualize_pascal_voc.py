@@ -7,9 +7,9 @@ import yaml
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))  # noqa: E402
 
+import color_code_error_messages  # noqa: F401
 from torchvision.transforms import v2 as transforms_v2
 
-from src.checkpoint_loader import load_checkpoint
 from src.data_setup.yolo_train_data_setup import create_datasets
 from src.models import yolo_net
 from src.utils import predict_on_random_pascal_voc_images
@@ -18,18 +18,33 @@ config = yaml.safe_load(open("config.yaml"))
 
 
 def visualize(args):
+    # data_transform = transforms_v2.Compose(
+    #     [
+    #         # transforms.RandomResizedCrop(50),
+    #         # transforms_v2.Resize((224, 224)),
+    #         # transforms_v2.RandomHorizontalFlip(),
+    #         # transforms_v2.RandomRotation((-30, 30)),
+    #         # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+    #         # transforms_v2.ToTensor(),
+    #         transforms_v2.ToImage(),
+    #         transforms_v2.ToDtype(torch.float32, scale=True),
+    #         # transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #         #  std=[0.229, 0.224, 0.225]),
+    #         # transforms.RandomErasing()
+    #     ]
+    # )
+
     data_transform = transforms_v2.Compose(
         [
             # transforms.RandomResizedCrop(50),
-            # transforms_v2.Resize((224, 224)),
-            # transforms_v2.RandomHorizontalFlip(),
-            # transforms_v2.RandomRotation((-30, 30)),
-            # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-            # transforms_v2.ToTensor(),
-            transforms_v2.ToImage(),
-            transforms_v2.ToDtype(torch.float32, scale=True),
-            # transforms.Normalize(mean=[0.485, 0.456, 0.406],
-            #  std=[0.229, 0.224, 0.225]),
+            transforms_v2.Resize((448, 448)),
+            transforms_v2.RandomHorizontalFlip(),
+            transforms_v2.RandomRotation((-30, 30)),
+            transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+            transforms_v2.ToTensor(),
+            transforms_v2.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
             # transforms.RandomErasing()
         ]
     )
@@ -42,13 +57,14 @@ def visualize(args):
     # )
 
     train_dataset, mini_val_dataset = create_datasets(
-        config["pascal_voc_root_dir"], data_transform
+        config["pascal_voc_root_dir"], data_transform, target_transform=None
     )
 
-    model = yolo_net.YOLONet(dropout=0).to("cpu")
+    yolo_net_model = yolo_net.YOLONet(dropout=0).to("cpu")
+    model = torch.nn.DataParallel(yolo_net_model)
 
-    if args.checkpoint_signature is not None:
-        load_checkpoint(model, args.checkpoint_signature)
+    # if args.checkpoint_signature is not None:
+    # load_checkpoint(model, args.checkpoint_signature)
 
     predict_on_random_pascal_voc_images(model, mini_val_dataset, n=5, seed=4)
 

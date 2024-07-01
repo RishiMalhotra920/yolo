@@ -1,35 +1,14 @@
+from typing import Callable
+
 import torch
 import torchvision.datasets as datasets
 import yaml
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import v2 as transforms_v2
 
+from src.utils import class_to_index
+
 config = yaml.safe_load(open("config.yaml"))
-
-VOC_CLASSES = [
-    "aeroplane",
-    "bicycle",
-    "bird",
-    "boat",
-    "bottle",
-    "bus",
-    "car",
-    "cat",
-    "chair",
-    "cow",
-    "diningtable",
-    "dog",
-    "horse",
-    "motorbike",
-    "person",
-    "pottedplant",
-    "sheep",
-    "sofa",
-    "train",
-    "tvmonitor",
-]
-
-class_to_index = {cls_name: idx for idx, cls_name in enumerate(VOC_CLASSES)}
 
 
 def yolo_target_transform(annotation: dict) -> torch.Tensor:
@@ -106,7 +85,7 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
 
 
 def create_datasets(
-    root_dir: str, transform: transforms_v2.Compose
+    root_dir: str, transform: transforms_v2.Compose, target_transform: Callable | None
 ) -> tuple[Dataset, Dataset]:
     train_dataset = datasets.VOCDetection(
         root=root_dir,
@@ -114,7 +93,7 @@ def create_datasets(
         image_set="train",
         transform=transform,
         download=False,
-        target_transform=yolo_target_transform,
+        target_transform=target_transform,
     )
 
     val_dataset = datasets.VOCDetection(
@@ -123,15 +102,19 @@ def create_datasets(
         image_set="val",
         transform=transform,
         download=False,
-        target_transform=yolo_target_transform,
+        target_transform=target_transform,
     )
     return train_dataset, val_dataset
 
 
 def create_dataloaders(
-    root_dir: str, transform: transforms_v2.Compose, batch_size: int, num_workers: int
+    root_dir: str,
+    transform: transforms_v2.Compose,
+    batch_size: int,
+    num_workers: int,
+    target_transform: Callable = yolo_target_transform,
 ) -> tuple[DataLoader, DataLoader]:
-    train_dataset, val_dataset = create_datasets(root_dir, transform)
+    train_dataset, val_dataset = create_datasets(root_dir, transform, target_transform)
 
     train_data_loader = DataLoader(
         train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True
@@ -160,7 +143,9 @@ if __name__ == "__main__":
     )
 
     train_dataset, _ = create_datasets(
-        "/Users/rishimalhotra/projects/cv/image_classification/datasets", data_transform
+        "/Users/rishimalhotra/projects/cv/image_classification/datasets",
+        data_transform,
+        yolo_target_transform,
     )
 
     print("image shape", train_dataset[0][0].shape)

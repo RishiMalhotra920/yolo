@@ -1,5 +1,7 @@
 import subprocess
 
+import color_code_error_messages  # noqa: F401
+import torch
 import yaml
 
 
@@ -19,6 +21,14 @@ def load_and_validate_yaml_file(path: str) -> dict:
             raise ValueError("rm command is not allowed in the yaml task.")
 
     return queue
+
+
+def reset_cuda() -> None:
+    """
+    Reset the cuda device
+    """
+    torch.cuda.empty_cache()
+    # subprocess.run("nvidia-smi --gpu-reset", shell=True, text=True, check=True)
 
 
 def start_train_queue(path: str) -> None:
@@ -57,6 +67,10 @@ def start_train_queue(path: str) -> None:
                 text=True,
                 check=True,
             )
+
+            # reset cuda cache in between training runs
+            reset_cuda()
+
             subprocess.run(task["run"], shell=True, text=True, check=True)
 
             print(
