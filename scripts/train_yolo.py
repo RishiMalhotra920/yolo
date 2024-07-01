@@ -78,10 +78,11 @@ def train(args) -> None:
     run_manager = RunManager(
         new_run_name=args.run_name,
         source_files=[
-            "lr_schedulers/*.py",
-            "models/*.py",
-            "trainers/*.py",
-            "pretrain_yolo.py",
+            "../src/lr_schedulers/*.py",
+            "../src/models/*.py",
+            "../src/trainers/*.py",
+            "train_yolo.py",
+            "../src/loss_functions/yolo_loss_function.py",
         ],
     )
     # if args.device == "cuda":
@@ -135,8 +136,9 @@ def train(args) -> None:
     parameters = {
         "num_epochs": args.num_epochs,
         "lr_scheduler": args.lr_scheduler,
+        "starting_lr": args.lr,
         "batch_size": args.batch_size,
-        "loss_fn": "CrossEntropyLoss",
+        "loss_fn": "YOLOLossv0",
         "optimizer": "Adam",
         "device": args.device,
         "dropout": args.dropout,
@@ -158,7 +160,6 @@ def train(args) -> None:
         loss_fn=loss_fn,
         epoch_start=epoch_start,
         epoch_end=epoch_start + args.num_epochs,
-        k_top=5,
         run_manager=run_manager,
         checkpoint_interval=args.checkpoint_interval,
         log_interval=args.log_interval,

@@ -1,12 +1,20 @@
 tasks:
-  - name: Train command 1
+  - name: yolo_finetune_with_0.00001_lr_with_0.5_dropout
     git_checkout_target: yolo_architecture
     run: |
-      # echo "hello world"
-      python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name train_scheduler_run
+      python train_yolo.py --run_name yolo_finetune_with_0.00001_lr_with_0.5_dropout --num_epochs 30 --batch_size 256 --lr_scheduler fixed --lr 0.00001 --dropout 0.5 --device cuda 
 
-  - name: Train command 2
+  - name: yolo_finetune_with_0.00001_lr_with_0.3_dropout
     git_checkout_target: yolo_architecture
     run: |
-      echo "hello world 2"
-      # python train_yolo.py --num_epochs 10 --batch_size 2 --lr_scheduler fixed --lr 0.001 --dropout 0 --run_name train_scheduler_run_2
+      python train_yolo.py --run_name yolo_finetune_with_0.00001_lr_with_0.3_dropout --num_epochs 30 --batch_size 256 --lr_scheduler fixed --lr 0.00001 --dropout 0.3 --device cuda 
+  
+  - name: yolo_finetune_with_0.0001_lr_with_0.5_dropout
+    git_checkout_target: yolo_architecture
+    run: |
+      python train_yolo.py --run_name yolo_finetune_with_0.0001_lr_with_0.5_dropout --num_epochs 30 --batch_size 256 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda 
+
+  - name: yolo_finetune_with_0.0001_lr_with_0.3_dropout
+    git_checkout_target: yolo_architecture
+    run: |
+      python train_yolo.py --run_name yolo_finetune_with_0.0001_lr_with_0.3_dropout --num_epochs 30 --batch_size 256 --lr_scheduler fixed --lr 0.0001 --dropout 0.3 --device cuda 
