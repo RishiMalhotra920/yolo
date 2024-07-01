@@ -108,6 +108,7 @@ def test_step(
 
             num_predictions += len(y)
 
+    # TODO: should be val/
     run_manager.log_metrics(
         {
             "test/loss": test_loss / len(dataloader),
@@ -154,6 +155,7 @@ def train(
         device: The device to run the model on.
 
     """
+
     run_manager.log_metrics(
         {"learning_rate": optimizer.param_groups[0]["lr"]}, epoch_start
     )
