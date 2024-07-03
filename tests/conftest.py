@@ -129,3 +129,64 @@ def sample_yolo_data_2() -> dict[str, Any]:
     }
 
     return result
+
+
+@pytest.fixture
+def sample_yolo_data_3() -> dict[str, Any]:
+    """
+    cell (2, 2): two predictions and two labels
+    batch 1 cell (3, 4): two predictions and one label
+    cell (4, 5): two predictions and zero labels
+    many cells: zero predictions and zero labels
+    """
+
+    # target tensor
+    cell_tensor_bboxes = [
+        0.3515625,
+        0.296875,
+        0.515625,
+        0.46875,
+        1.0,
+        0.3645833432674408,
+        0.3359375,
+        0.511904776096344,
+        0.4575892984867096,
+        1.0,
+    ]
+
+    one_hot = [0.0 for _ in range(20)]
+    one_hot[class_to_index["horse"]] = 1
+
+    cell_target_tensor = cell_tensor_bboxes + one_hot
+
+    target_tensor = torch.zeros(2, 7, 7, 30)
+    target_tensor[0, 2, 2, :] = torch.tensor(cell_target_tensor)
+    target_tensor[1, 3, 4, :] = torch.tensor(cell_target_tensor)
+    target_tensor[1, 3, 4, 5:10] = 0
+
+    # output tensor
+
+    offset_bbox1 = [0.001, 0.002, 0.001, 0.002, -0.3]
+    offset_bbox2 = [0.002, 0.002, 0.001, 0.002, -0.2]
+    offset_bbox = offset_bbox1 + offset_bbox2
+
+    prob_vec = [0.19 / 19 for _ in range(20)]
+    prob_vec[class_to_index["horse"]] = 0.81
+
+    cell_tensor_bboxes_with_offset = [
+        x + y for x, y in zip(cell_tensor_bboxes, offset_bbox)
+    ]
+    cell_output_tensor = cell_tensor_bboxes_with_offset + prob_vec
+
+    output_tensor = torch.zeros(2, 7, 7, 30)
+    output_tensor[0, 2, 2, :] = torch.tensor(cell_output_tensor)
+    output_tensor[1, 3, 4, :] = torch.tensor(cell_output_tensor)
+    output_tensor[0, 4, 5, :] = torch.tensor(cell_output_tensor)
+
+    result = {
+        "annotation": None,
+        "yolo_net_target_tensor": target_tensor,
+        "yolo_net_output_tensor": output_tensor,
+    }
+
+    return result
