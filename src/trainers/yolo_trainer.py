@@ -104,6 +104,12 @@ def train_step(
             )
 
             train_loss = 0
+            train_xy_loss = 0
+            train_wh_loss = 0
+            train_conf_loss = 0
+            train_conf_noobj_loss = 0
+            train_clf_loss = 0
+
             num_correct = 0
             num_incorrect_localization = 0
 

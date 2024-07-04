@@ -154,4 +154,11 @@ class YOLOLoss(nn.Module):
             + clf_loss
         )
 
-        return loss, xy_loss, wh_loss, conf_loss, conf_noobj_loss, clf_loss
+        return (
+            loss,
+            self.lambda_coord * xy_loss,
+            self.lambda_coord * wh_loss,
+            conf_loss,
+            self.lambda_noobj * conf_noobj_loss,
+            clf_loss,
+        )
