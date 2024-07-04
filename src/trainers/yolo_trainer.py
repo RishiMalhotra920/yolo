@@ -8,6 +8,17 @@ from src import utils
 from src.run_manager import RunManager
 
 
+def log_gradients(model: nn.Module) -> None:
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            avg_grad = param.grad.abs().mean().item()
+            avg_weight = param.abs().mean().item()
+            avg_grad_weight = avg_grad / avg_weight
+            print(
+                f"Layer: {name} | Avg Grad: {avg_grad} | Avg Weight: {avg_weight} | Avg Grad/Weight: {avg_grad_weight}"
+            )
+
+
 def train_step(
     model: nn.Module,
     dataloader: DataLoader,
@@ -39,6 +50,7 @@ def train_step(
         train_loss += loss.item()
         optimizer.zero_grad()
         loss.backward()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
         result_dict = utils.get_yolo_metrics(y_pred, y)
@@ -49,6 +61,8 @@ def train_step(
         num_incorrect_background += result_dict["num_incorrect_background"]
 
         num_predictions += len(y)
+
+        log_gradients(model)
 
         if batch != 0 and batch % log_interval == 0:
             run_manager.log_metrics(

@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import color_code_error_messages  # noqa: F401
@@ -44,6 +45,9 @@ def start_train_queue(path: str) -> None:
     task_index = 0
     num_tasks = float("inf")
 
+    # Create logs directory if it doesn't exist
+    os.makedirs("logs", exist_ok=True)
+
     while task_index < num_tasks:
         queue = load_and_validate_yaml_file(path=path)
 
@@ -71,7 +75,12 @@ def start_train_queue(path: str) -> None:
             # reset cuda cache in between training runs
             reset_cuda()
 
-            subprocess.run(task["run"], shell=True, text=True, check=True)
+            subprocess.run(
+                f"{task['run']} > logs/{task['name']}.txt",
+                shell=True,
+                text=True,
+                check=True,
+            )
 
             print(
                 f"\033[1;32mTask {task_index}: {task['name']} executed successfully\033[0m\n"

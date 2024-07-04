@@ -37,8 +37,9 @@ class YOLOLoss(nn.Module):
 
                 this_pred_x = preds[:, :, :, this_pred_idx]
                 this_pred_y = preds[:, :, :, this_pred_idx + 1]
-                this_pred_w = preds[:, :, :, this_pred_idx + 2]
-                this_pred_h = preds[:, :, :, this_pred_idx + 3]
+                # ensure that w and h are positive since they are square rooted.
+                this_pred_w = torch.relu(preds[:, :, :, this_pred_idx + 2])
+                this_pred_h = torch.relu(preds[:, :, :, this_pred_idx + 3])
                 this_pred_conf = preds[:, :, :, this_pred_idx + 4]
 
                 this_label_x = labels[:, :, :, this_label_idx]
@@ -47,9 +48,13 @@ class YOLOLoss(nn.Module):
                 this_label_h = labels[:, :, :, this_label_idx + 3]
                 this_label_conf = labels[:, :, :, this_label_idx + 4]
 
+                print("this_pred_x", this_pred_x, "\nthis_pred_y", this_pred_y)
+
                 this_xy_loss = F.mse_loss(
                     this_pred_x, this_label_x, reduction="none"
                 ) + F.mse_loss(this_pred_y, this_label_y, reduction="none")
+
+                print("print")
                 this_wh_loss = F.mse_loss(
                     torch.sqrt(this_pred_w), torch.sqrt(this_label_w), reduction="none"
                 ) + F.mse_loss(
@@ -142,5 +147,11 @@ class YOLOLoss(nn.Module):
             + self.lambda_noobj * conf_noobj_loss
             + clf_loss
         )
+
+        print("start section")
+        print("xy_loss", xy_loss)
+        print("wh_loss", wh_loss)
+        print("conf_loss", conf_loss)
+        print("the total loss is: ", loss.item())
 
         return loss
