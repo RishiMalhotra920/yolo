@@ -63,6 +63,9 @@ def start_train_queue(path: str) -> None:
             f"\033[1;36mCheckout to branch/commit {task['git_checkout_target']} and execute tasks:\n{task['run']}\033[0m\n\n"
         )
 
+        print("\033[1;33mKilling all python processes\033[0m\n")
+        subprocess.run("pkill -9 python", shell=True, text=True, check=True)
+
         try:
             subprocess.run(
                 f"git checkout {task['git_checkout_target']} && git pull",
