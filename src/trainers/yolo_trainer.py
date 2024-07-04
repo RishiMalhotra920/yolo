@@ -111,12 +111,12 @@ def test_step(
     # TODO: should be val/
     run_manager.log_metrics(
         {
-            "test/loss": test_loss / len(dataloader),
-            "test/accuracy": num_correct / num_predictions,
-            "test/percent_incorrect_localization": num_incorrect_localization
+            "val/loss": test_loss / len(dataloader),
+            "val/accuracy": num_correct / num_predictions,
+            "val/percent_incorrect_localization": num_incorrect_localization
             / num_predictions,
-            "test/percent_incorrect_other": num_incorrect_other / num_predictions,
-            "test/percent_incorrect_background": num_incorrect_background
+            "val/percent_incorrect_other": num_incorrect_other / num_predictions,
+            "val/percent_incorrect_background": num_incorrect_background
             / num_predictions,
         },
         epoch,
