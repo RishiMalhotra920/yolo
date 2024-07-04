@@ -91,6 +91,7 @@ def train(args) -> None:
     model = torch.nn.DataParallel(yolo_net_model)
 
     if args.continue_from_yolo_checkpoint_signature is not None:
+        print("Loading YOLO checkpoint ...")
         epoch_start = load_checkpoint(
             model, checkpoint_signature=args.continue_from_yolo_checkpoint_signature
         )
@@ -98,7 +99,9 @@ def train(args) -> None:
         run_manager.set_checkpoint_to_continue_from(
             args.continue_from_yolo_checkpoint_signature
         )
+        print("YOLO checkpoint loaded...")
     elif args.continue_from_image_net_checkpoint_signature is not None:
+        print("Loading ImageNet checkpoint for YOLO finetuning ...")
         load_checkpoint_for_yolo_from_pretrained_image_net_model(
             model,
             checkpoint_signature=args.continue_from_image_net_checkpoint_signature,
@@ -109,6 +112,7 @@ def train(args) -> None:
         )
         epoch_start = 0
         run_manager.add_tags(["pretrained_image_net_run"])
+        print("Loaded ImageNet checkpoint for YOLO finetuning ...")
     else:
         epoch_start = 0
 

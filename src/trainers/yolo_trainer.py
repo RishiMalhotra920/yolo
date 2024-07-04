@@ -35,6 +35,7 @@ def train_step(
         y_pred = model(X)
 
         loss = loss_fn(y_pred, y)
+        print("loss", loss.item())
         train_loss += loss.item()
         optimizer.zero_grad()
         loss.backward()
