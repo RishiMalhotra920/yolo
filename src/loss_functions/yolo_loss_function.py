@@ -47,8 +47,6 @@ class YOLOLoss(nn.Module):
                 this_label_h = labels[:, :, :, this_label_idx + 3]
                 this_label_conf = labels[:, :, :, this_label_idx + 4]
 
-                # print("this_pred_x", this_pred_x, "this_label_x", this_label_x)
-
                 this_xy_loss = F.mse_loss(
                     this_pred_x, this_label_x, reduction="none"
                 ) + F.mse_loss(this_pred_y, this_label_y, reduction="none")
@@ -62,9 +60,7 @@ class YOLOLoss(nn.Module):
                 )
 
                 this_pred_bbox = preds[:, :, :, this_pred_idx : this_pred_idx + 4]
-                this_label_bbox = labels[
-                    :, :, :, this_label_idx : this_label_idx * 5 + 4
-                ]
+                this_label_bbox = labels[:, :, :, this_label_idx : this_label_idx + 4]
 
                 this_iou = calculate_iou(this_pred_bbox, this_label_bbox)  # (bs, S, S)
 
@@ -107,10 +103,9 @@ class YOLOLoss(nn.Module):
             obj_at_label_one_mask * match_one_per_cell_onehot
             + obj_at_label_two_mask * match_two_per_cell_onehot
         )  # (bs, S, S, B*B)
-        print("matches_per_cell_twohot", matches_and_one_obj_ij_mask[0, 2, 2])
 
         # multiply by one hot vector to get only the loss for the predictor responsible for the object.
-        print("trace 1 sum of xy losses", xy_losses[0, 2, 2, 1], xy_losses[0, 2, 2, 2])
+
         xy_loss = torch.sum(matches_and_one_obj_ij_mask * xy_losses)
         wh_loss = torch.sum(matches_and_one_obj_ij_mask * wh_losses)
         conf_loss = torch.sum(matches_and_one_obj_ij_mask * conf_losses)
@@ -139,18 +134,6 @@ class YOLOLoss(nn.Module):
         # TODO: if you really want to mean these, create the mean over the number of preds and labels
         # also don't just randomly use mean everywhere. stick to the formulae.
 
-        print(
-            "xy_loss: ",
-            xy_loss,
-            "wh_loss: ",
-            wh_loss,
-            "conf_loss: ",
-            conf_loss,
-            "conf_noobj_loss: ",
-            self.lambda_noobj * conf_noobj_loss,
-            "clf_loss: ",
-            clf_loss,
-        )
         loss = (
             self.lambda_coord * (xy_loss + wh_loss)
             + conf_loss

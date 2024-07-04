@@ -70,7 +70,14 @@ def calculate_iou(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torch.Tensor:
 
     union = width1 * height1 + width2 * height2 - intersection
 
-    return intersection / union
+    iou = intersection / union
+
+    # filter out nans. we define iou as 0 if there's no bboxes.
+    # this works well because we intend to calculate the argmax over the iou values.
+    # so if there's no bbox, the iou will be 0 and this won't be selected by the argmax
+    iou[torch.isnan(iou)] = 0
+
+    return iou
 
 
 def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
@@ -217,6 +224,55 @@ def display_random_images(
     plt.show()
 
 
+def transform_preds_into_bboxes(
+    preds: torch.Tensor,
+    image_width: float,
+    image_height: float,
+) -> list[tuple[float, float, float, float, float, str]]:
+    """
+    takes in the preds tensor and returns a list of bboxes
+    Args:
+        preds: shape (1, 7, 7, 30)
+        image_width: int - the original image width
+        image_height: int - the original image height
+
+    Returns:
+        list of bboxes of shape (x_top_left, y_top_left, width, height)
+    """
+
+    bboxes = []
+    cell_width = image_width / 7
+    cell_height = image_height / 7
+
+    for grid_x in range(7):
+        for grid_y in range(7):
+            for b in range(2):
+                x_center_relative = float(preds[0, grid_x, grid_y, b * 5].item())
+                y_center_relative = float(preds[0, grid_x, grid_y, b * 5 + 1].item())
+                width_relative = float(preds[0, grid_x, grid_y, b * 5 + 2].item())
+                height_relative = float(preds[0, grid_x, grid_y, b * 5 + 3].item())
+
+                x_start = image_width / 7 * grid_x
+                y_start = image_height / 7 * grid_y
+
+                x_center = x_start + x_center_relative * cell_width
+                y_center = y_start + y_center_relative * cell_height
+
+                width = width_relative * image_width
+                height = height_relative * image_height
+                x = x_center - width / 2
+                y = y_center - height / 2
+
+                confidence = float(preds[0, grid_x, grid_y, b * 5 + 4].item())
+                label_vec = preds[0, grid_x, grid_y, 10:]
+                label_idx = int(torch.argmax(label_vec).item())
+                label = index_to_class[label_idx]
+
+                bboxes.append((x, y, width, height, confidence, label))
+
+    return bboxes
+
+
 def predict_on_random_pascal_voc_images(
     model: torch.nn.Module,
     dataset,
@@ -248,7 +304,7 @@ def predict_on_random_pascal_voc_images(
         #     ax.set_title(f"Label: {label}\nPred: {pred}")
 
         # Loop through the objects and draw each one
-        print("annotations", annotations)
+
         objects = annotations["annotation"]["object"]
         for obj in objects:
             bbox = obj["bndbox"]
@@ -273,86 +329,38 @@ def predict_on_random_pascal_voc_images(
 
         # predictions
 
-        print("this is image shape", image.unsqueeze(0).shape)
         preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
-        print("preds", preds)
+
+        image_width = float(annotations["annotation"]["size"]["width"])
+        image_height = float(annotations["annotation"]["size"]["height"])
+
+        bboxes = transform_preds_into_bboxes(preds, image_width, image_height)
+
         # get the predicted bounding boxes
-
-        image_width = 448
-        grid_cell_size = image_width / 7
-        preds_grid_cell_x_pixel_start_coordinates = (
-            torch.arange(0, 7) * image_width / 7
-        ).repeat(7, 1)  # (7, 7)
-        preds_grid_cell_y_pixel_start_coordinates = (
-            preds_grid_cell_x_pixel_start_coordinates.T
-        )  # (7, 7)
-
-        # bbox 1
-        preds[..., 0] = preds_grid_cell_x_pixel_start_coordinates + (
-            preds[..., 0] * grid_cell_size
-        )
-        preds[..., 1] = preds_grid_cell_y_pixel_start_coordinates + (
-            preds[..., 1] * grid_cell_size
-        )
-
-        preds[..., 2] = preds[..., 2] * image_width
-        preds[..., 3] = preds[..., 3] * image_width
-        # preds[..., 4] is confidence
-
-        # bbox 2
-        preds[..., 5] = preds_grid_cell_x_pixel_start_coordinates + (
-            preds[..., 5] * grid_cell_size
-        )
-        preds[..., 6] = preds_grid_cell_y_pixel_start_coordinates + (
-            preds[..., 6] * grid_cell_size
-        )
-
-        preds[..., 7] = preds[..., 7] * image_width
-        preds[..., 8] = preds[..., 8] * image_width
-        # preds[..., 9] is confidence
 
         confidence_threshold = 0.01
 
-        for grid_x in range(7):
-            for grid_y in range(7):
-                for b in range(2):
-                    confidence = preds[0, grid_x, grid_y, b * 5 + 4]
-                    print("this is confidence", confidence)
-                    if confidence > confidence_threshold:
-                        bbox = preds[0, grid_x, grid_y, b * 5 : b * 5 + 4]
-                        label_vec = preds[0, grid_x, grid_y, 10:]
-                        label_idx = int(torch.argmax(label_vec).item())
+        for bbox in bboxes:
+            x, y, width, height, confidence, label = bbox
 
-                        label = index_to_class[label_idx]
-
-                        x_center = bbox[0].item()
-                        y_center = bbox[1].item()
-                        width = bbox[2].item()
-                        height = bbox[3].item()
-
-                        x = x_center - width / 2
-                        y = y_center - height / 2
-
-                        print("this is x, y, width, height", x, y, width, height)
-
-                        # Create a rectangle patch for each object and add it to the plot
-                        rect = patches.Rectangle(
-                            (x, y),
-                            width,
-                            height,
-                            linewidth=2,
-                            edgecolor="g",
-                            facecolor="none",
-                        )
-                        ax.add_patch(rect)
-                        ax.text(
-                            x,
-                            y - 10,
-                            label,
-                            color="white",
-                            fontsize=12,
-                            bbox=dict(facecolor="green", alpha=0.5),
-                        )
+            if confidence > confidence_threshold:
+                rect = patches.Rectangle(
+                    (x, y),
+                    width,
+                    height,
+                    linewidth=2,
+                    edgecolor="g",
+                    facecolor="none",
+                )
+                ax.add_patch(rect)
+                ax.text(
+                    x,
+                    y - 10,
+                    label,
+                    color="white",
+                    fontsize=12,
+                    bbox=dict(facecolor="green", alpha=0.5),
+                )
 
         ax.axis("off")
     plt.show()
@@ -377,9 +385,8 @@ def predict_on_random_image_net_images(
         image, label = dataset[index]
         ax = axes[i]
         pred_logits = model(image.unsqueeze(0))
-        print("pred_logits", pred_logits)
+
         pred = int(torch.argmax(pred_logits.squeeze()).item())
-        print("pred", pred)
 
         ax.imshow(image.permute(1, 2, 0))
         if class_names:

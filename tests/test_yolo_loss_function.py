@@ -108,7 +108,6 @@ def test_yolo_loss_fn_two_bounding_boxes_in_one_cell_swapped_order(sample_yolo_d
     )
 
     output_tensor = sample_yolo_data_2["yolo_net_output_tensor"]
-    print("trace 0", output_tensor[0, 2, 2, :])
 
     temp = output_tensor[0, 2, 2, :5].clone()
     output_tensor[0, 2, 2, :5] = output_tensor[0, 2, 2, 5:10]
@@ -137,7 +136,6 @@ def test_yolo_loss_fn_empty_one_prediction_and_no_object(sample_yolo_data_2):
 
     lambda_noobj = 0.5
 
-    print("trace 0", (bbox_conf_1 - bbox_conf_2))
     conf_noobj_loss = np.sum((bbox_conf_1 - bbox_conf_2) ** 2)
 
     target_loss = lambda_noobj * conf_noobj_loss
@@ -255,10 +253,3 @@ def test_objects_in_multiple_cells_with_object_loss(sample_yolo_data_3):
     assert round(loss.item(), 4) == round(
         total_expected_loss, 4
     ), "Expected loss to be equal"
-
-
-# test the iou function you wrote
-
-# test objects in multiple cells with one no object loss == 0
-
-# test the visualization function that takes in the target tensor and the output tensor and visualizes the bounding boxes and the class labels.

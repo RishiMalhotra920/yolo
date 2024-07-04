@@ -70,7 +70,6 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
             grid_cell_to_class[grid_x][grid_y] = class_index
             grid_cells[grid_x, grid_y, B * 5 :] = one_hot
 
-        print("object", grid_x, grid_y, x, y, width, height, confidence)
         # if the class label is not set or class label is the same as the one already set, then set bounding box coordinates.
         num_bboxes_per_grid_cell = grid_cell_to_num_bboxes[grid_x][grid_y]
         if (
