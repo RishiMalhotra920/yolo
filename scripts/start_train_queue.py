@@ -54,7 +54,7 @@ def start_train_queue(path: str) -> None:
             return
 
         print(
-            f"\033[1;36m############################################## Executing task {task_index}: {task['name']} ##############################################\033[0m\n"
+            f"\033[1;36m============================================== Executing task {task_index}: {task['name']} ==============================================\033[0m\n"
         )
         print(
             f"\033[1;36mCheckout to branch/commit {task['git_checkout_target']} and execute tasks:\n{task['run']}\033[0m\n\n"

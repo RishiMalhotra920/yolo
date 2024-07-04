@@ -24,10 +24,10 @@ class YOLOLoss(nn.Module):
         S = 7
 
         # TODO; maybe you can initialize these as zero tensors and then assign them.
-        ious_per_cell = torch.zeros((bs, S, S, B * B))
-        xy_losses = torch.zeros((bs, S, S, B * B))
-        wh_losses = torch.zeros((bs, S, S, B * B))
-        conf_losses = torch.zeros((bs, S, S, B * B))
+        ious_per_cell = torch.zeros((bs, S, S, B * B), device=preds.device)
+        xy_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
+        wh_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
+        conf_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
 
         # try to take a top down approach and see if you
         for pred_idx in range(B):
@@ -78,7 +78,9 @@ class YOLOLoss(nn.Module):
         # if argmax is 1 or 2, then label 1 responsible for pred 0, and label 0 responsible for pred 1.
 
         match_one_per_cell = torch.argmax(ious_per_cell, dim=3)  # (bs, S, S)
-        match_two_per_cell = ((torch.zeros((bs, S, S)) + 3) - match_one_per_cell).long()
+        match_two_per_cell = (
+            (torch.zeros((bs, S, S), device=preds.device) + 3) - match_one_per_cell
+        ).long()
 
         # one-hot vector represents which predictor is responsible for predicting the object.
         match_one_per_cell_onehot = torch.nn.functional.one_hot(
