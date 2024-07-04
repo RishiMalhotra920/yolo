@@ -109,9 +109,6 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
 
     is_class_correct = preds_argmax == labels_argmax  # (bs, 7, 7)
 
-    print("preds_argmax", preds_argmax, "labels_argmax", labels_argmax)
-    print("is_class_correct", is_class_correct)
-
     num_correct_for_pred_box_1 = (
         torch.logical_and((iou_pred_1_and_label_1 > 0.5), is_class_correct).sum().item()
     )
