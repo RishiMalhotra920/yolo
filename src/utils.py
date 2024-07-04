@@ -92,8 +92,8 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
     """
     B = 2
 
-    does_label_1_exist_for_each_cell = label[..., 2] > 0
-    does_label_2_exist_for_each_cell = label[..., 7] > 0
+    does_label_1_exist_for_each_cell = label[..., 4] > 0
+    does_label_2_exist_for_each_cell = label[..., 9] > 0
 
     # 0, 1, 2, 3 - bbox 1. 4 - bbox 1 confidence
     iou_pred_1_and_label_1 = calculate_iou(pred[..., :4], label[..., :4])  # (bs, 7, 7)
@@ -103,9 +103,14 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
         pred[..., 5:9], label[..., 5:9]
     )  # (bs, 7, 7)
     # Check if the predicted class labels are correct
-    is_class_correct = (pred[..., B * 5 :] == label[..., B * 5 :]).all(
-        dim=-1
-    )  # (bs, 7, 7)
+
+    preds_argmax = torch.argmax(pred[..., B * 5 :], dim=-1)
+    labels_argmax = torch.argmax(label[..., B * 5 :], dim=-1)
+
+    is_class_correct = preds_argmax == labels_argmax  # (bs, 7, 7)
+
+    print("preds_argmax", preds_argmax, "labels_argmax", labels_argmax)
+    print("is_class_correct", is_class_correct)
 
     num_correct_for_pred_box_1 = (
         torch.logical_and((iou_pred_1_and_label_1 > 0.5), is_class_correct).sum().item()
@@ -154,14 +159,26 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
         .item()
     )
 
+    # incorrectly classified object as background
+
     num_incorrect_background_for_pred_box_1 = (
-        torch.logical_and((iou_pred_1_and_label_1 <= 0.1), is_class_correct)
+        torch.logical_and(
+            torch.logical_and(
+                does_label_1_exist_for_each_cell, iou_pred_1_and_label_1 <= 0.1
+            ),
+            is_class_correct,
+        )
         .sum()
         .item()
     )
 
     num_incorrect_background_for_pred_box_2 = (
-        torch.logical_and((iou_pred_2_and_label_2 <= 0.1), is_class_correct)
+        torch.logical_and(
+            torch.logical_and(
+                does_label_2_exist_for_each_cell, iou_pred_2_and_label_2 <= 0.1
+            ),
+            is_class_correct,
+        )
         .sum()
         .item()
     )

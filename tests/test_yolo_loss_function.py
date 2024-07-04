@@ -12,7 +12,7 @@ from src.loss_functions.yolo_loss_function import YOLOLoss
 def test_yolo_loss_fn_same_target_and_label(sample_yolo_data_1):
     yolo_loss = YOLOLoss()
 
-    loss = yolo_loss(
+    loss, _, _, _, _, _ = yolo_loss(
         sample_yolo_data_1["yolo_net_target_tensor"],
         sample_yolo_data_1["yolo_net_target_tensor"],
     )
@@ -66,7 +66,7 @@ def test_yolo_loss_fn_two_bounding_boxes_in_one_cell(sample_yolo_data_2):
         clf_loss,
     )
 
-    loss = yolo_loss(
+    loss, _, _, _, _, _ = yolo_loss(
         sample_yolo_data_2["yolo_net_output_tensor"],
         sample_yolo_data_2["yolo_net_target_tensor"],
     )
@@ -113,7 +113,7 @@ def test_yolo_loss_fn_two_bounding_boxes_in_one_cell_swapped_order(sample_yolo_d
     output_tensor[0, 2, 2, :5] = output_tensor[0, 2, 2, 5:10]
     output_tensor[0, 2, 2, 5:10] = temp
 
-    loss = yolo_loss(
+    loss, _, _, _, _, _ = yolo_loss(
         output_tensor,
         sample_yolo_data_2["yolo_net_target_tensor"],
     )
@@ -140,7 +140,7 @@ def test_yolo_loss_fn_empty_one_prediction_and_no_object(sample_yolo_data_2):
 
     target_loss = lambda_noobj * conf_noobj_loss
 
-    loss = yolo_loss(
+    loss, _, _, _, _, _ = yolo_loss(
         sample_yolo_data_2["yolo_net_output_tensor"],
         torch.zeros((1, 7, 7, 30)),
     )
@@ -245,7 +245,7 @@ def test_objects_in_multiple_cells_with_object_loss(sample_yolo_data_3):
 
     yolo_loss = YOLOLoss()
 
-    loss = yolo_loss(
+    loss, _, _, _, _, _ = yolo_loss(
         sample_yolo_data_3["yolo_net_output_tensor"],
         sample_yolo_data_3["yolo_net_target_tensor"],
     )

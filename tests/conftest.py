@@ -81,7 +81,9 @@ def sample_yolo_data_1() -> dict[str, Any]:
 
 @pytest.fixture
 def sample_yolo_data_2() -> dict[str, Any]:
-    """"""
+    """
+    slight offset in the bounding box and the class probabilities
+    """
 
     # target tensor
     cell_tensor_bboxes = [
