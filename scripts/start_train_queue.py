@@ -62,7 +62,7 @@ def start_train_queue(path: str) -> None:
 
         try:
             subprocess.run(
-                f"git checkout {task['git_checkout_target']}",
+                f"git checkout {task['git_checkout_target']} && git pull",
                 shell=True,
                 text=True,
                 check=True,
