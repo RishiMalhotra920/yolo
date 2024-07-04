@@ -36,7 +36,6 @@ class RunManager:
         assert new_run_name is not None, "new_run_name should not be None"
 
         base_path = os.getcwd()
-        print("this is base path", base_path)
         assert_filepaths_exist(base_path, source_files)
 
         self.temp_dir = Path("temp")
