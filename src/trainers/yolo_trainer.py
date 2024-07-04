@@ -9,14 +9,18 @@ from src.run_manager import RunManager
 
 
 def log_gradients(model: nn.Module) -> None:
-    for name, param in model.named_parameters():
-        if param.grad is not None:
-            avg_grad = param.grad.abs().mean().item()
-            avg_weight = param.abs().mean().item()
-            avg_grad_weight = avg_grad / avg_weight
-            print(
-                f"Layer: {name} | Avg Grad: {avg_grad} | Avg Weight: {avg_weight} | Avg Grad/Weight: {avg_grad_weight}"
-            )
+    """
+    TODO: log gradients here
+    """
+    # for name, param in model.named_parameters():
+    #     if param.grad is not None:
+    #         avg_grad = param.grad.abs().mean().item()
+    #         avg_weight = param.abs().mean().item()
+    #         avg_grad_weight = avg_grad / avg_weight
+    #         print(
+    #             f"Layer: {name} | Avg Grad: {avg_grad} | Avg Weight: {avg_weight} | Avg Grad/Weight: {avg_grad_weight}"
+    #         )
+    pass
 
 
 def train_step(
@@ -31,6 +35,12 @@ def train_step(
 ) -> None:
     model.train()
     train_loss = 0
+    train_xy_loss = 0
+    train_wh_loss = 0
+    train_conf_loss = 0
+    train_conf_noobj_loss = 0
+    train_clf_loss = 0
+
     num_correct = 0
     num_incorrect_localization = 0
 
@@ -45,8 +55,17 @@ def train_step(
 
         y_pred = model(X)
 
-        loss = loss_fn(y_pred, y)
+        loss, xy_loss, wh_loss, conf_loss, conf_noobj_loss, clf_loss = loss_fn(
+            y_pred, y
+        )
+
         train_loss += loss.item()
+        train_xy_loss += xy_loss.item()
+        train_wh_loss += wh_loss.item()
+        train_conf_loss += conf_loss.item()
+        train_conf_noobj_loss += conf_noobj_loss.item()
+        train_clf_loss += clf_loss.item()
+
         optimizer.zero_grad()
         loss.backward()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -66,7 +85,13 @@ def train_step(
         if batch != 0 and batch % log_interval == 0:
             run_manager.log_metrics(
                 {
-                    "train/loss": loss.item(),
+                    # Note: if you average out the loss in the loss function, then you should divide by len(dataloader) here.
+                    "train/loss": train_loss / num_predictions,
+                    "train/xy_loss": train_xy_loss / num_predictions,
+                    "train/wh_loss": train_wh_loss / num_predictions,
+                    "train/conf_loss": train_conf_loss / num_predictions,
+                    "train/conf_noobj_loss": train_conf_noobj_loss / num_predictions,
+                    "train/clf_loss": train_clf_loss / num_predictions,
                     "train/accuracy": num_correct / num_predictions,
                     "train/percent_incorrect_localization": num_incorrect_localization
                     / num_predictions,
@@ -77,6 +102,8 @@ def train_step(
                 },
                 epoch + batch / len(dataloader),
             )
+
+            train_loss = 0
             num_correct = 0
             num_incorrect_localization = 0
 
@@ -96,6 +123,12 @@ def test_step(
     model.eval()
 
     test_loss = 0
+    test_xy_loss = 0
+    test_wh_loss = 0
+    test_conf_loss = 0
+    test_conf_noobj_loss = 0
+    test_clf_loss = 0
+
     num_correct = 0
     num_incorrect_localization = 0
     num_incorrect_other = 0
@@ -110,8 +143,15 @@ def test_step(
 
             y_pred = model(X)
 
-            loss = loss_fn(y_pred, y)
+            loss, xy_loss, wh_loss, conf_loss, conf_noobj_loss, clf_loss = loss_fn(
+                y_pred, y
+            )
             test_loss += loss.item()
+            test_xy_loss += xy_loss.item()
+            test_wh_loss += wh_loss.item()
+            test_conf_loss += conf_loss.item()
+            test_conf_noobj_loss += conf_noobj_loss.item()
+            test_clf_loss += clf_loss.item()
 
             result_dict = utils.get_yolo_metrics(y_pred, y)
 
@@ -122,10 +162,15 @@ def test_step(
 
             num_predictions += len(y)
 
-    # TODO: should be val/
+    # Note: if you average out the loss in the loss function, then you should divide by len(dataloader) here.
     run_manager.log_metrics(
         {
-            "val/loss": test_loss / len(dataloader),
+            "val/loss": test_loss / num_predictions,
+            "val/xy_loss": test_xy_loss / num_predictions,
+            "val/wh_loss": test_wh_loss / num_predictions,
+            "val/conf_loss": test_conf_loss / num_predictions,
+            "val/conf_noobj_loss": test_conf_noobj_loss / num_predictions,
+            "val/clf_loss": test_clf_loss / num_predictions,
             "val/accuracy": num_correct / num_predictions,
             "val/percent_incorrect_localization": num_incorrect_localization
             / num_predictions,

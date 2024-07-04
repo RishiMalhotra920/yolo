@@ -43,11 +43,13 @@ def train_step(
         if batch != 0 and batch % log_interval == 0:
             run_manager.log_metrics(
                 {
+                    # TODO: this should be train_loss
                     "train/loss": loss.item(),
                     "train/accuracy": num_correct / num_predictions,
                 },
                 epoch + batch / len(dataloader),
             )
+            # reset train_loss to 0
             num_correct = 0
             num_predictions = 0
 

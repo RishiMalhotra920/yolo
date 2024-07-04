@@ -11,7 +11,16 @@ class YOLOLoss(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-    def forward(self, preds: torch.Tensor, labels: torch.Tensor):
+    def forward(
+        self, preds: torch.Tensor, labels: torch.Tensor
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
         """
         preds and labels are of shape (batch_size, S, S, B * 5 + C)
 
@@ -145,4 +154,4 @@ class YOLOLoss(nn.Module):
             + clf_loss
         )
 
-        return loss
+        return loss, xy_loss, wh_loss, conf_loss, conf_noobj_loss, clf_loss
