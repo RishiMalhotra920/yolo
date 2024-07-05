@@ -48,8 +48,12 @@ def train(args) -> None:
         [
             # transforms.RandomResizedCrop(50),
             transforms_v2.Resize((448, 448)),
-            transforms_v2.RandomHorizontalFlip(),
-            transforms_v2.RandomRotation((-30, 30)),
+            # applying these transforms to the pascal voc dataset means you have to change the labels in accordance with the transforms
+            # and hence change the VOCDataset to a custom implementation
+            # as in here: https://github.com/motokimura/yolo_v1_pytorch/blob/master/voc.py
+            # i don't have the time for that!
+            # transforms_v2.RandomHorizontalFlip(),
+            # transforms_v2.RandomRotation((-30, 30)),
             transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
             transforms_v2.ToTensor(),
             transforms_v2.Normalize(

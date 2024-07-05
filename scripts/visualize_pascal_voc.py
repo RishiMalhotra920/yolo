@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pa
 import color_code_error_messages  # noqa: F401
 from torchvision.transforms import v2 as transforms_v2
 
+from src.checkpoint_loader import load_checkpoint
 from src.data_setup.yolo_train_data_setup import create_datasets
 from src.models import yolo_net
 from src.utils import predict_on_random_pascal_voc_images
@@ -63,8 +64,8 @@ def visualize(args):
     yolo_net_model = yolo_net.YOLONet(dropout=0).to("cpu")
     model = torch.nn.DataParallel(yolo_net_model)
 
-    # if args.checkpoint_signature is not None:
-    # load_checkpoint(model, args.checkpoint_signature)
+    if args.checkpoint_signature is not None:
+        load_checkpoint(model, args.checkpoint_signature)
 
     predict_on_random_pascal_voc_images(model, mini_val_dataset, n=5, seed=4)
 
