@@ -104,9 +104,9 @@ def load_checkpoint_for_yolo_from_pretrained_image_net_model(
     # model.load_state_dict(params)
     # 1. filter out keys in pretrained model not in current model
     pretrained_dict = {k: v for k, v in params.items() if k in model_dict}
-    print(
-        f"image net model keys: {params.keys()}\n yolo model keys: {model_dict.keys()}\n keys loading: {pretrained_dict.keys()}"
-    )
+    # print(
+    # f"image net model keys: {params.keys()}\n yolo model keys: {model_dict.keys()}\n keys loading: {pretrained_dict.keys()}"
+    # )
     # 2. overwrite entries in the existing state dict
     model_dict.update(pretrained_dict)
     # 3. load the new state dict

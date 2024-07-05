@@ -47,7 +47,7 @@ def start_train_queue(path: str) -> None:
     num_tasks = float("inf")
 
     # Create logs directory if it doesn't exist
-    # os.makedirs("logs", exist_ok=True)
+    os.makedirs("logs", exist_ok=True)
 
     while task_index < num_tasks:
         queue = load_and_validate_yaml_file(path=path)
@@ -61,9 +61,10 @@ def start_train_queue(path: str) -> None:
         print(
             f"\033[1;36m============================================== Executing task {task_index}: {task['name']} ==============================================\033[0m\n"
         )
-        print(
-            f"\033[1;36mCheckout to branch/commit {task['git_checkout_target']} and execute tasks:\n{task['run']}\033[0m\n\n"
-        )
+        git_checkout_subtask = f"git checkout {task['git_checkout_target']} && git pull"
+        git_run_subtask = f"{task['run']} > logs/{task['name']}.txt"
+
+        print(f"\033[1;36m{git_checkout_subtask}\n{git_run_subtask}\033[0m\n\n")
 
         print("\033[1;33mKilling all python processes\033[0m\n")
         current_pid = os.getpid()
@@ -75,7 +76,7 @@ def start_train_queue(path: str) -> None:
 
         try:
             subprocess.run(
-                f"git checkout {task['git_checkout_target']} && git pull",
+                git_checkout_subtask,
                 shell=True,
                 text=True,
                 check=True,
@@ -86,7 +87,7 @@ def start_train_queue(path: str) -> None:
 
             subprocess.run(
                 # f"{task['run']} > logs/{task['name']}.txt",
-                task["run"],
+                git_run_subtask,
                 shell=True,
                 text=True,
                 check=True,
