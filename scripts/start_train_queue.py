@@ -1,4 +1,6 @@
+import os
 import subprocess
+import time
 
 import color_code_error_messages  # noqa: F401
 import torch
@@ -64,7 +66,12 @@ def start_train_queue(path: str) -> None:
         )
 
         print("\033[1;33mKilling all python processes\033[0m\n")
-        subprocess.run("pkill -9 python", shell=True, text=True, check=True)
+        current_pid = os.getpid()
+        subprocess.run(
+            f"ps aux | grep python | grep -v grep | awk '{{print $2}}' | grep -v {current_pid} | xargs kill -9",
+            shell=True,
+        )
+        time.sleep(2)
 
         try:
             subprocess.run(
