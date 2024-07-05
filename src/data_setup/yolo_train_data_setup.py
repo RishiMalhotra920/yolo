@@ -87,6 +87,26 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
     return grid_cells
 
 
+# def RandomAffine
+
+
+class CustomVOCDetection(VOCDetection):
+    def __init__(self, root, year="2012", image_set="train", transform=None):
+        super().__init__(
+            root, year="2012", image_set="train", transform=None, target_transform=None
+        )
+        self.transform = transform
+
+    def __getitem__(self, index):
+        image, target = super().__getitem__(index)
+
+        transformed_image = self.transform(image)
+
+    def random_shift():
+        if random.random() > 0.5:
+            return
+
+
 def create_datasets(
     root_dir: str, transform: transforms_v2.Compose, target_transform: Callable | None
 ) -> tuple[Dataset, Dataset]:
