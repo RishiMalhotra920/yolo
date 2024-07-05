@@ -237,7 +237,6 @@ def train(
             epoch,
             device,
         )
-        test_step(model, val_dataloader, loss_fn, run_manager, epoch + 1, device)
 
         run_manager.log_metrics(
             {"learning_rate": optimizer.param_groups[0]["lr"]},
@@ -246,6 +245,7 @@ def train(
 
         # saves model/epoch_5 at the end of epoch 5. epochs are 0 indexed.
         if epoch % checkpoint_interval == 0 or epoch == epoch_end - 1:
+            test_step(model, val_dataloader, loss_fn, run_manager, epoch + 1, device)
             run_manager.save_model(model, epoch)
 
         lr_scheduler.step()
