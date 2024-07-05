@@ -42,3 +42,10 @@ Update the train_queue.yaml file and run the command:
 ```
 python start_train_queue.py
 ```
+
+## some problems i ran into
+
+To scroll on tmux sessions, press `ctrl+b followed by [`
+Or run
+
+`echo "set -g mode-mouse on" > .tmux.conf` and reboot the session.
