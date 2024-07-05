@@ -1,13 +1,13 @@
 tasks:
-  - name: yolo_finetune_custom_lr_scheduler_four_phases
+  - name: yolo_finetune_custom_lr_scheduler_four_phases_with_clipping
     git_checkout_target: yolo_architecture
     run: |
-      python train_yolo.py --run_name yolo_finetune_custom_lr_scheduler_four_phases --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 135 --batch_size 64 --lr_scheduler custom --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 10
+      python train_yolo.py --run_name yolo_finetune_custom_lr_scheduler_four_phases_with_clipping --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 135 --batch_size 64 --lr_scheduler custom --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 10
   
-  - name: yolo_finetune_fixed_lr_with_0.0001_lr
+  - name: yolo_finetune_fixed_lr_with_0.0001_lr_with_clipping
     git_checkout_target: yolo_architecture
     run: |
-      python train_yolo.py --run_name yolo_finetune_fixed_lr_with_0.0001_lr --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 135 --batch_size 64 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 10
+      python train_yolo.py --run_name yolo_finetune_fixed_lr_with_0.0001_lr_with_clipping --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 135 --batch_size 64 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 10
   
   # - name: yolo_finetune_with_0.0001_lr_with_0.5_dropout
   #   git_checkout_target: yolo_architecture
