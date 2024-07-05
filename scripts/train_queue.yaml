@@ -1,13 +1,13 @@
 tasks:
-  - name: yolo_finetune_with_0.0001_lr_with_0.5_dropout
-    git_checkout_target: yolo_architecture
-    run: |
-      python train_yolo.py --run_name yolo_finetune_with_0.0001_lr_with_0.5_dropout --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 5 --batch_size 128 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 5
+  # - name: yolo_finetune_with_0.0001_lr_with_0.5_dropout
+  #   git_checkout_target: yolo_architecture
+  #   run: |
+  #     python train_yolo.py --run_name yolo_finetune_with_0.0001_lr_with_0.5_dropout --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 5 --batch_size 128 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 5
 
-  - name: yolo_finetune_with_0.00001_lr_with_0.5_dropout
-    git_checkout_target: yolo_architecture
-    run: |
-      python train_yolo.py --run_name yolo_finetune_with_0.00001_lr_with_0.5_dropout --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 5 --batch_size 128 --lr_scheduler fixed --lr 0.00001 --dropout 0.5 --device cuda --checkpoint_interval 5
+  # - name: yolo_finetune_with_0.00001_lr_with_0.5_dropout
+  #   git_checkout_target: yolo_architecture
+  #   run: |
+  #     python train_yolo.py --run_name yolo_finetune_with_0.00001_lr_with_0.5_dropout --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 5 --batch_size 128 --lr_scheduler fixed --lr 0.00001 --dropout 0.5 --device cuda --checkpoint_interval 5
 
   - name: yolo_finetune_with_0.0001_lr_with_0.0_dropout
     git_checkout_target: yolo_architecture

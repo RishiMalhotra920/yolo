@@ -92,8 +92,8 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
     """
     B = 2
 
-    does_label_1_exist_for_each_cell = label[..., 4] > 0
-    does_label_2_exist_for_each_cell = label[..., 9] > 0
+    does_label_1_exist_for_each_cell = label[..., 4] == 1.0
+    does_label_2_exist_for_each_cell = label[..., 9] == 1.0
 
     # 0, 1, 2, 3 - bbox 1. 4 - bbox 1 confidence
     iou_pred_1_and_label_1 = calculate_iou(pred[..., :4], label[..., :4])  # (bs, 7, 7)
@@ -110,48 +110,63 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
     is_class_correct = preds_argmax == labels_argmax  # (bs, 7, 7)
 
     num_correct_for_pred_box_1 = (
-        torch.logical_and((iou_pred_1_and_label_1 > 0.5), is_class_correct).sum().item()
+        (
+            does_label_1_exist_for_each_cell
+            & (iou_pred_1_and_label_1 > 0.5)
+            & is_class_correct
+        )
+        .sum()
+        .item()
     )
+
     num_correct_for_pred_box_2 = (
-        torch.logical_and((iou_pred_2_and_label_2 > 0.5), is_class_correct).sum().item()
+        (
+            does_label_2_exist_for_each_cell
+            & (iou_pred_2_and_label_2 > 0.5)
+            & is_class_correct
+        )
+        .sum()
+        .item()
     )
 
     num_incorrect_localization_for_pred_box_1 = (
-        torch.logical_and(
-            torch.logical_and(
-                does_label_1_exist_for_each_cell,
-                torch.logical_and(
-                    0.1 <= iou_pred_1_and_label_1, iou_pred_1_and_label_1 <= 0.5
-                ),
-            ),
-            is_class_correct,
+        (
+            does_label_1_exist_for_each_cell
+            & (0.1 <= iou_pred_1_and_label_1)
+            & (iou_pred_1_and_label_1 <= 0.5)
+            & is_class_correct
         )
         .sum()
         .item()
     )
 
     num_incorrect_localization_for_pred_box_2 = (
-        torch.logical_and(
-            torch.logical_and(
-                does_label_2_exist_for_each_cell,
-                torch.logical_and(
-                    0.1 <= iou_pred_2_and_label_2, iou_pred_2_and_label_2 <= 0.5
-                ),
-            ),
-            is_class_correct,
+        (
+            does_label_2_exist_for_each_cell
+            & (0.1 <= iou_pred_2_and_label_2)
+            & (iou_pred_2_and_label_2 <= 0.5)
+            & is_class_correct
         )
         .sum()
         .item()
     )
 
     num_incorrect_other_for_pred_box_1 = (
-        torch.logical_and((iou_pred_1_and_label_1 > 0.1), ~is_class_correct)
+        (
+            does_label_1_exist_for_each_cell
+            & (iou_pred_1_and_label_1 > 0.1)
+            & ~is_class_correct
+        )
         .sum()
         .item()
     )
 
     num_incorrect_other_for_pred_box_2 = (
-        torch.logical_and((iou_pred_2_and_label_2 > 0.1), ~is_class_correct)
+        (
+            does_label_2_exist_for_each_cell
+            & (iou_pred_2_and_label_2 > 0.1)
+            & ~is_class_correct
+        )
         .sum()
         .item()
     )
@@ -159,25 +174,19 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
     # incorrectly classified object as background
 
     num_incorrect_background_for_pred_box_1 = (
-        torch.logical_and(
-            torch.logical_and(
-                does_label_1_exist_for_each_cell, iou_pred_1_and_label_1 <= 0.1
-            ),
-            is_class_correct,
-        )
+        (does_label_1_exist_for_each_cell & (iou_pred_1_and_label_1 <= 0.1))
         .sum()
         .item()
     )
 
     num_incorrect_background_for_pred_box_2 = (
-        torch.logical_and(
-            torch.logical_and(
-                does_label_2_exist_for_each_cell, iou_pred_2_and_label_2 <= 0.1
-            ),
-            is_class_correct,
-        )
+        (does_label_2_exist_for_each_cell & (iou_pred_2_and_label_2 <= 0.1))
         .sum()
         .item()
+    )
+    num_objects = (
+        does_label_1_exist_for_each_cell.sum().item()
+        + does_label_2_exist_for_each_cell.sum().item()
     )
 
     return {
@@ -188,6 +197,7 @@ def get_yolo_metrics(pred: torch.Tensor, label: torch.Tensor) -> dict:
         + num_incorrect_other_for_pred_box_2,
         "num_incorrect_background": num_incorrect_background_for_pred_box_1
         + num_incorrect_background_for_pred_box_2,
+        "num_objects": num_objects,
     }
 
 

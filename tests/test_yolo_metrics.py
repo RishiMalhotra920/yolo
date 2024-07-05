@@ -29,6 +29,7 @@ def test_num_correct_same_data(sample_yolo_data_1):
     assert (
         metrics["num_incorrect_background"] == 0
     ), "Expected num_incorrect_background to be 0"
+    assert metrics["num_objects"] == 2, "Expected num_objects to be 2"
 
 
 def test_num_correct_different_data(sample_yolo_data_2):
@@ -48,6 +49,7 @@ def test_num_correct_different_data(sample_yolo_data_2):
     assert (
         metrics["num_incorrect_background"] == 0
     ), "Expected num_incorrect_background to be 0"
+    assert metrics["num_objects"] == 2, "Expected num_objects to be 2"
 
 
 from src.utils import calculate_iou
@@ -91,6 +93,7 @@ def test_num_incorrect_localization(sample_yolo_data_2):
     assert (
         metrics["num_incorrect_background"] == 0
     ), "Expected num_incorrect_background to be 0"
+    assert metrics["num_objects"] == 2, "Expected num_objects to be 2"
 
 
 def test_num_incorrect_other(sample_yolo_data_2):
@@ -122,6 +125,7 @@ def test_num_incorrect_other(sample_yolo_data_2):
     assert (
         metrics["num_incorrect_background"] == 0
     ), "Expected num_incorrect_background to be 0"
+    assert metrics["num_objects"] == 2, "Expected num_objects to be 2"
 
 
 def test_num_incorrect_background(sample_yolo_data_2):
@@ -160,6 +164,7 @@ def test_num_incorrect_background(sample_yolo_data_2):
     assert (
         metrics["num_incorrect_background"] == 1
     ), "Expected num_incorrect_background to be 0"
+    assert metrics["num_objects"] == 2, "Expected num_objects to be 2"
 
 
 # test: see if num_incorrect_background is calculated correctly

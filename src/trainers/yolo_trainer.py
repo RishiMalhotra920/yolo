@@ -43,10 +43,10 @@ def train_step(
 
     num_correct = 0
     num_incorrect_localization = 0
-
     num_incorrect_other = 0
     num_incorrect_background = 0
     num_predictions = 0
+    num_objects = 0  # number of objects in the batch
 
     for batch, (X, y) in tqdm(
         enumerate(dataloader), total=len(dataloader), desc="Train Step", leave=False
@@ -77,6 +77,7 @@ def train_step(
         num_incorrect_localization += result_dict["num_incorrect_localization"]
         num_incorrect_other += result_dict["num_incorrect_other"]
         num_incorrect_background += result_dict["num_incorrect_background"]
+        num_objects += result_dict["num_objects"]
 
         num_predictions += len(y)
 
@@ -92,13 +93,12 @@ def train_step(
                     "train/conf_loss": train_conf_loss / num_predictions,
                     "train/conf_noobj_loss": train_conf_noobj_loss / num_predictions,
                     "train/clf_loss": train_clf_loss / num_predictions,
-                    "train/accuracy": num_correct / num_predictions,
+                    "train/accuracy": num_correct / num_objects,
                     "train/percent_incorrect_localization": num_incorrect_localization
-                    / num_predictions,
-                    "train/percent_incorrect_other": num_incorrect_other
-                    / num_predictions,
+                    / num_objects,
+                    "train/percent_incorrect_other": num_incorrect_other / num_objects,
                     "train/percent_incorrect_background": num_incorrect_background
-                    / num_predictions,
+                    / num_objects,
                 },
                 epoch + batch / len(dataloader),
             )
@@ -112,10 +112,10 @@ def train_step(
 
             num_correct = 0
             num_incorrect_localization = 0
-
             num_incorrect_other = 0
             num_incorrect_background = 0
             num_predictions = 0
+            num_objects = 0
 
 
 def test_step(
@@ -134,6 +134,7 @@ def test_step(
     test_conf_loss = 0
     test_conf_noobj_loss = 0
     test_clf_loss = 0
+    num_objects = 0
 
     num_correct = 0
     num_incorrect_localization = 0
@@ -165,6 +166,7 @@ def test_step(
             num_incorrect_localization += result_dict["num_incorrect_localization"]
             num_incorrect_other += result_dict["num_incorrect_other"]
             num_incorrect_background += result_dict["num_incorrect_background"]
+            num_objects += result_dict["num_objects"]
 
             num_predictions += len(y)
 
@@ -177,12 +179,11 @@ def test_step(
             "val/conf_loss": test_conf_loss / num_predictions,
             "val/conf_noobj_loss": test_conf_noobj_loss / num_predictions,
             "val/clf_loss": test_clf_loss / num_predictions,
-            "val/accuracy": num_correct / num_predictions,
+            "val/accuracy": num_correct / num_objects,
             "val/percent_incorrect_localization": num_incorrect_localization
-            / num_predictions,
-            "val/percent_incorrect_other": num_incorrect_other / num_predictions,
-            "val/percent_incorrect_background": num_incorrect_background
-            / num_predictions,
+            / num_objects,
+            "val/percent_incorrect_other": num_incorrect_other / num_objects,
+            "val/percent_incorrect_background": num_incorrect_background / num_objects,
         },
         epoch,
     )
