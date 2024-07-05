@@ -67,6 +67,7 @@ def visualize(args):
     if args.checkpoint_signature is not None:
         load_checkpoint(model, args.checkpoint_signature)
 
+    # TODO: this in 448x448 images. you need to scale this to the original image size
     predict_on_random_pascal_voc_images(model, mini_val_dataset, n=5, seed=4)
 
     # display_random_images(train_dataset,

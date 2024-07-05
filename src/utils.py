@@ -334,7 +334,7 @@ def predict_on_random_pascal_voc_images(
             bbox = obj["bndbox"]
             x = int(bbox["xmin"])
             y = int(bbox["ymin"])
-            # TODO: this in 448x448 images. you need to scale this to the original image size
+
             width = int(bbox["xmax"]) - x
             height = int(bbox["ymax"]) - y
 
