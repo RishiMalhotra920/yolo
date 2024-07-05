@@ -15,7 +15,7 @@ from src.checkpoint_loader import (
 )
 from src.data_setup import yolo_train_data_setup
 from src.loss_functions.yolo_loss_function import YOLOLoss
-from src.lr_schedulers.yolo_pretrain_lr_scheduler import (
+from src.lr_schedulers.yolo_train_lr_scheduler import (
     get_custom_lr_scheduler,
     get_fixed_lr_scheduler,
 )
