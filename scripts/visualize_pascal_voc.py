@@ -39,14 +39,15 @@ def visualize(args):
         [
             # transforms.RandomResizedCrop(50),
             transforms_v2.Resize((448, 448)),
-            transforms_v2.RandomHorizontalFlip(),
-            transforms_v2.RandomRotation((-30, 30)),
-            transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-            transforms_v2.ToTensor(),
-            transforms_v2.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),
+            # transforms_v2.RandomHorizontalFlip(),
+            # transforms_v2.RandomRotation((-30, 30)),
+            # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+            # transforms_v2.ToTensor(),
+            # transforms_v2.Normalize(
+            # mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            # ),
             # transforms.RandomErasing()
+            transforms_v2.ToTensor(),
         ]
     )
 
@@ -68,7 +69,13 @@ def visualize(args):
         load_checkpoint(model, args.checkpoint_signature)
 
     # TODO: this in 448x448 images. you need to scale this to the original image size
-    predict_on_random_pascal_voc_images(model, mini_val_dataset, n=5, seed=4)
+    predict_on_random_pascal_voc_images(
+        model,
+        mini_val_dataset,
+        n=5,
+        seed=args.seed,
+        threshold=args.threshold,
+    )
 
     # display_random_images(train_dataset,
     #   class_names=class_names, n=5, seed=4)
@@ -87,6 +94,20 @@ if __name__ == "__main__":
         help="The path to the checkpoint in the format RUN_ID:CHECKPOINT_PATH eg: IM-28:checkpoints/epoch_5",
         required=False,
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="The seed for the random number generator",
+        required=False,
+        default=42,
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        help="The threshold for the bounding box",
+        required=True,
+    )
+
     args = parser.parse_args()
     if args.checkpoint_signature is None:
         print("Not loading checkpoint. Model will be randomly initialized.")

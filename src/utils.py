@@ -301,16 +301,24 @@ def predict_on_random_pascal_voc_images(
     model: torch.nn.Module,
     dataset,
     *,
+    threshold: float,
     class_names: list[str] | None = None,
     n: int = 5,
     seed: int | None = None,
 ):
+    """
+    we want to see how the model perceives the image.
+    so we plot 448x448 images.
+    """
     if seed:
         random.seed(seed)
 
     random_samples_idx = random.sample(range(len(dataset)), k=n)
 
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
+
+    print("Red boxes are the ground truth bounding boxes")
+    print("Green boxes are the predicted bounding boxes")
 
     for i, index in enumerate(random_samples_idx):
         image, annotations = dataset[index]
@@ -330,22 +338,36 @@ def predict_on_random_pascal_voc_images(
         # Loop through the objects and draw each one
 
         objects = annotations["annotation"]["object"]
+        image_width = float(annotations["annotation"]["size"]["width"])
+        image_height = float(annotations["annotation"]["size"]["height"])
+        new_image_width = 448
+        new_image_height = 448
+        width_ratio = new_image_width / image_width
+        height_ratio = new_image_height / image_height
+
         for obj in objects:
             bbox = obj["bndbox"]
-            x = int(bbox["xmin"])
-            y = int(bbox["ymin"])
+            x_min = int(bbox["xmin"]) * width_ratio
+            y_min = int(bbox["ymin"]) * height_ratio
+            x_max = int(bbox["xmax"]) * width_ratio
+            y_max = int(bbox["ymax"]) * height_ratio
 
-            width = int(bbox["xmax"]) - x
-            height = int(bbox["ymax"]) - y
+            width = x_max - x_min
+            height = y_max - y_min
 
             # Create a rectangle patch for each object and add it to the plot
             rect = patches.Rectangle(
-                (x, y), width, height, linewidth=2, edgecolor="r", facecolor="none"
+                (x_min, y_min),
+                width,
+                height,
+                linewidth=2,
+                edgecolor="r",
+                facecolor="none",
             )
             ax.add_patch(rect)
             ax.text(
-                x,
-                y - 10,
+                x_min,
+                y_min - 10,
                 obj["name"],
                 color="white",
                 fontsize=12,
@@ -356,19 +378,14 @@ def predict_on_random_pascal_voc_images(
 
         preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
 
-        image_width = float(annotations["annotation"]["size"]["width"])
-        image_height = float(annotations["annotation"]["size"]["height"])
-
-        bboxes = transform_preds_into_bboxes(preds, image_width, image_height)
+        bboxes = transform_preds_into_bboxes(preds, 448, 448)
 
         # get the predicted bounding boxes
-
-        confidence_threshold = 0.01
 
         for bbox in bboxes:
             x, y, width, height, confidence, label = bbox
 
-            if confidence > confidence_threshold:
+            if confidence > threshold:
                 rect = patches.Rectangle(
                     (x, y),
                     width,

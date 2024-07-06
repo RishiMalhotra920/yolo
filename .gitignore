@@ -16,3 +16,4 @@ setup.sh
 **/.ruff_cache/
 .DS_Store
 scripts/logs/
+checkpoints/
