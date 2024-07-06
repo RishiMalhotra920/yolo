@@ -1,9 +1,10 @@
 from typing import Callable
 
 import torch
-import torchvision.datasets as datasets
 import yaml
 from torch.utils.data import DataLoader, Dataset
+from torchvision import tv_tensors
+from torchvision.datasets import VOCDetection
 from torchvision.transforms import v2 as transforms_v2
 
 from src.utils import class_to_index
@@ -11,7 +12,12 @@ from src.utils import class_to_index
 config = yaml.safe_load(open("config.yaml"))
 
 
-def yolo_target_transform(annotation: dict) -> torch.Tensor:
+# data should be as the follows:
+
+
+def yolo_target_transform(
+    bounding_boxes: tv_tensors, labels: list[int], image_width: int, image_height: int
+) -> torch.Tensor:
     """
     labels[..., 2] and labels[..., 7] are the width of bbox 1 and bbox 2
     if a grid cell has no labels, then labels[..., 2] and labels[..., 7] will be 0
@@ -23,9 +29,9 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
     # {'name': 'horse', 'pose': 'Left', 'truncated': '0', 'occluded': '1', 'bndbox': {'xmin': '53', 'ymin': '87', 'xmax': '471', 'ymax': '420'}, 'difficult': '0'}, {'name': 'person', 'pose': 'Unspecified', 'truncated': '1', 'occluded': '0', 'bndbox': {'xmin': '158', 'ymin': '44', 'xmax': '289', 'ymax': '167'}, 'difficult': '0'}]}}
 
     # Convert the annotations to a four tuple of tensors
-    objects = annotation["annotation"]["object"]
-    image_width = int(annotation["annotation"]["size"]["width"])
-    image_height = int(annotation["annotation"]["size"]["height"])
+    # objects = annotation["annotation"]["object"]
+    # image_width = int(annotation["annotation"]["size"]["width"])
+    # image_height = int(annotation["annotation"]["size"]["height"])
 
     grid_size = 7
 
@@ -38,8 +44,69 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
     grid_cell_to_class = [[-1 for _ in range(grid_size)] for _ in range(grid_size)]
     grid_cell_to_num_bboxes = [[0 for _ in range(grid_size)] for _ in range(grid_size)]
 
+
+    # refer to shape of object_indexes as oi
+
+    bounding_boxes: torch.tensor = torch.tensor(bounding_boxes.data)  # type: ignore
+    # convert to center x, center y, width, height, confidence
+    x_min, y_min, x_max, y_max = (
+        bounding_boxes[:, 0],
+        bounding_boxes[:, 1],
+        bounding_boxes[:, 2],
+        bounding_boxes[:, 3],
+    )
+    x_center = (x_min + x_max) / 2 # (oi)
+    y_center = (y_min + y_max) / 2 # (oi)
+
+    # normalize w, h by image width and height
+    width_adjusted = (x_max - x_min) / image_width # (oi) 
+    height_adjusted = (y_max - y_min) / image_height # (oi)
+
+    # convert x, y to cell offset
+    x_relative_to_grid = (x_center / image_width) * grid_size # (oi)
+    y_relative_to_grid = (y_center / image_height) * grid_size # (oi)
+
+    grid_x = x_relative_to_grid.int() # (oi)
+    grid_y = y_relative_to_grid.int() # (oi)
+
+    offset_x = x_relative_to_grid - int(x_relative_to_grid) # n
+    offset_y = y_relative_to_grid - int(y_relative_to_grid) # n
+
+    # take any 2 bounding boxes
+    result = torch.zeros((7, 7, 30))
+
+    result[grid_x, grid_y, 0] = offset_x
+    result[grid_x, grid_y, 1] = offset_y
+    result[grid_x, grid_y, 2] = width_adjusted
+    result[grid_x, grid_y, 3] = height_adjusted
+    result[grid_x, grid_y, 4] = 1.0
+
+    object_1_index = 0
+
+    # every grid cell must have two bounding box labels at most
+    # 
+
+    result[grid_x, grid_y, 2] =
+    try:
+        object_2_index = labels.index(labels[object_1_index], 1)
+        object_indexes = [object_1_index, object_2_index]
+    except ValueError: # there is only one object with the current label
+        object_indexes = [object_1_index]
+    
+
+
+    # result[grid_x, grid_y, 5:] = torch.tensor([
+
+    
+
+    # create 7x7x30 tensor and populate with bounding_boxes
+
+
+
+    bounding_boxes is of the format: [x_relative_to_grid, y_relative_to_grid, w, h, confidence]
+
     # you actually don't need to scale anything to the 448*448 dimension space.
-    for object in objects:
+    for bbox in bounding_boxes:
         # normalize the bounding box coordinates
         x_min, x_max = int(object["bndbox"]["xmin"]), int(object["bndbox"]["xmax"])
         y_min, y_max = int(object["bndbox"]["ymin"]), int(object["bndbox"]["ymax"])
@@ -91,32 +158,75 @@ def yolo_target_transform(annotation: dict) -> torch.Tensor:
 
 
 class CustomVOCDetection(VOCDetection):
-    def __init__(self, root, year="2012", image_set="train", transform=None):
+    def __init__(
+        self,
+        root,
+        year: str,
+        image_set: str,
+        transform: transforms_v2.Compose,
+    ):
         super().__init__(
             root, year="2012", image_set="train", transform=None, target_transform=None
         )
         self.transform = transform
 
     def __getitem__(self, index):
-        image, target = super().__getitem__(index)
+        image, annotation = super().__getitem__(index)
 
-        transformed_image = self.transform(image)
+        # transformed_image,  = self.transform(image)
 
-    def random_shift():
-        if random.random() > 0.5:
-            return
+        objects = annotation["annotation"]["object"]
+        image_width = int(annotation["annotation"]["size"]["width"])
+        image_height = int(annotation["annotation"]["size"]["height"])
+
+        boxes = []
+
+        # create bboxes and images of the format
+        # [image, bbox] where bbox is of format [xmin, ymin, w, h]
+
+        labels = []
+        for object in objects:
+            # normalize the bounding box coordinates
+            x_min, x_max = int(object["bndbox"]["xmin"]), int(object["bndbox"]["xmax"])
+            y_min, y_max = int(object["bndbox"]["ymin"]), int(object["bndbox"]["ymax"])
+
+            boxes.append([x_min, y_min, x_max, y_max])
+            labels.append(class_to_index[object["name"]])
+
+        boxes = tv_tensors.BoundingBoxes(
+            data=boxes, format="XYXY", canvas_size=(image_height, image_width)
+        )  # type: ignore missing type annotations here.
+
+        out_image, out_boxes = self.transform(image, boxes)
+
+        out_target = yolo_target_transform(out_boxes, labels, image_width, image_height)
+
+        return out_image, out_target
+
+        # boxes = tv_tensors.BoundingBoxes(
+        #     data=[[15, 10, 370, 510], [275, 340, 510, 510], [130, 345, 210, 425]],
+        #     format="XYXY",
+        #     canvas_size=(image_height, image_width),
+        # )
+
+        # for obje
+
+        # # pass the image into torchvision transform v2, pass the bboxes into yolo_target_transform
+        # # return the transformed image and the transformed bboxes
+
+        # for object in annotation
 
 
 def create_datasets(
     root_dir: str, transform: transforms_v2.Compose, target_transform: Callable | None
 ) -> tuple[Dataset, Dataset]:
-    train_dataset = datasets.VOCDetection(
+    train_dataset = CustomVOCDetection(
         root=root_dir,
         year="2012",
         image_set="train",
         transform=transform,
-        download=False,
-        target_transform=target_transform,
+        # download=False,
+        # target_transform=target_transform,
     )
 
     val_dataset = datasets.VOCDetection(
@@ -124,8 +234,8 @@ def create_datasets(
         year="2012",
         image_set="val",
         transform=transform,
-        download=False,
-        target_transform=target_transform,
+        # download=False,
+        # target_transform=target_transform,
     )
     return train_dataset, val_dataset
 
