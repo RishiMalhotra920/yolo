@@ -302,6 +302,8 @@ def predict_on_random_pascal_voc_images(
     dataset,
     *,
     threshold: float,
+    show_preds: bool,
+    show_labels: bool,
     class_names: list[str] | None = None,
     n: int = 5,
     seed: int | None = None,
@@ -323,86 +325,77 @@ def predict_on_random_pascal_voc_images(
     for i, index in enumerate(random_samples_idx):
         image, annotations = dataset[index]
         ax = axes[i]
-        # pred_logits = model(image.unsqueeze(0))
-        # print('pred_logits', pred_logits)
-        # pred = int(torch.argmax(pred_logits.squeeze()).item())
-        # print('pred', pred)
 
         ax.imshow(image.permute(1, 2, 0))
-        # if class_names:
-        #     ax.set_title(
-        #         f"Label: {label} {class_names[label]}\nPred: {pred} {class_names[pred]}")
-        # else:
-        #     ax.set_title(f"Label: {label}\nPred: {pred}")
 
-        # Loop through the objects and draw each one
+        if show_labels:
+            objects = annotations["annotation"]["object"]
+            image_width = float(annotations["annotation"]["size"]["width"])
+            image_height = float(annotations["annotation"]["size"]["height"])
+            new_image_width = 448
+            new_image_height = 448
+            width_ratio = new_image_width / image_width
+            height_ratio = new_image_height / image_height
 
-        objects = annotations["annotation"]["object"]
-        image_width = float(annotations["annotation"]["size"]["width"])
-        image_height = float(annotations["annotation"]["size"]["height"])
-        new_image_width = 448
-        new_image_height = 448
-        width_ratio = new_image_width / image_width
-        height_ratio = new_image_height / image_height
+            for obj in objects:
+                bbox = obj["bndbox"]
+                x_min = int(bbox["xmin"]) * width_ratio
+                y_min = int(bbox["ymin"]) * height_ratio
+                x_max = int(bbox["xmax"]) * width_ratio
+                y_max = int(bbox["ymax"]) * height_ratio
 
-        for obj in objects:
-            bbox = obj["bndbox"]
-            x_min = int(bbox["xmin"]) * width_ratio
-            y_min = int(bbox["ymin"]) * height_ratio
-            x_max = int(bbox["xmax"]) * width_ratio
-            y_max = int(bbox["ymax"]) * height_ratio
+                width = x_max - x_min
+                height = y_max - y_min
 
-            width = x_max - x_min
-            height = y_max - y_min
-
-            # Create a rectangle patch for each object and add it to the plot
-            rect = patches.Rectangle(
-                (x_min, y_min),
-                width,
-                height,
-                linewidth=2,
-                edgecolor="r",
-                facecolor="none",
-            )
-            ax.add_patch(rect)
-            ax.text(
-                x_min,
-                y_min - 10,
-                obj["name"],
-                color="white",
-                fontsize=12,
-                bbox=dict(facecolor="red", alpha=0.5),
-            )
-
-        # predictions
-
-        preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
-
-        bboxes = transform_preds_into_bboxes(preds, 448, 448)
-
-        # get the predicted bounding boxes
-
-        for bbox in bboxes:
-            x, y, width, height, confidence, label = bbox
-
-            if confidence > threshold:
+                # Create a rectangle patch for each object and add it to the plot
                 rect = patches.Rectangle(
-                    (x, y),
+                    (x_min, y_min),
                     width,
                     height,
                     linewidth=2,
-                    edgecolor="g",
+                    edgecolor="r",
                     facecolor="none",
                 )
                 ax.add_patch(rect)
                 ax.text(
-                    x,
-                    y - 10,
-                    label,
+                    x_min,
+                    y_min - 10,
+                    obj["name"],
                     color="white",
                     fontsize=12,
-                    bbox=dict(facecolor="green", alpha=0.5),
+                    bbox=dict(facecolor="red", alpha=0.5),
                 )
+
+        if show_preds:
+            # predictions
+
+            preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
+
+            bboxes = transform_preds_into_bboxes(preds, 448, 448)
+
+            # get the predicted bounding boxes
+
+            for bbox in bboxes:
+                x, y, width, height, confidence, label = bbox
+
+                if confidence > threshold:
+                    rect = patches.Rectangle(
+                        (x, y),
+                        width,
+                        height,
+                        linewidth=2,
+                        edgecolor="g",
+                        facecolor="none",
+                    )
+                    ax.add_patch(rect)
+                    ax.text(
+                        x,
+                        y - 10,
+                        label,
+                        color="white",
+                        fontsize=12,
+                        bbox=dict(facecolor="green", alpha=0.5),
+                    )
 
         ax.axis("off")
     plt.show()

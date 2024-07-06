@@ -58,7 +58,7 @@ def visualize(args):
     #     ]
     # )
 
-    train_dataset, mini_val_dataset = create_datasets(
+    train_dataset, val_dataset = create_datasets(
         config["pascal_voc_root_dir"], data_transform, target_transform=None
     )
 
@@ -71,8 +71,11 @@ def visualize(args):
     # TODO: this in 448x448 images. you need to scale this to the original image size
     predict_on_random_pascal_voc_images(
         model,
-        mini_val_dataset,
+        train_dataset,
+        # val_dataset,
         n=5,
+        show_preds=args.show_preds,
+        show_labels=args.show_labels,
         seed=args.seed,
         threshold=args.threshold,
     )
@@ -83,7 +86,7 @@ def visualize(args):
 
 if __name__ == "__main__":
     # for example
-    # python visualize.py --run_id "IM-28" --checkpoint_path checkpoints/epoch_1
+    # python visualize_pascal_voc.py --checkpoint_signature IM-232:checkpoints/epoch_85 --threshold 0.5 --seed 420 --show_preds true
     # --hidden_units 256
     parser = argparse.ArgumentParser(description="Visualize the model's predictions")
     # parser.add_argument("--hidden_units", type=int,
@@ -106,6 +109,20 @@ if __name__ == "__main__":
         type=float,
         help="The threshold for the bounding box",
         required=True,
+    )
+    parser.add_argument(
+        "--show_labels",
+        type=bool,
+        help="Whether to show the labels on the bounding boxes",
+        required=False,
+        default=False,
+    )
+    parser.add_argument(
+        "--show_preds",
+        type=bool,
+        help="Whether to show the scores on the bounding boxes",
+        required=False,
+        default=True,
     )
 
     args = parser.parse_args()
