@@ -55,6 +55,15 @@ def sample_yolo_data_1() -> dict[str, Any]:
         }
     }
 
+    bboxes = torch.tensor(
+        [
+            [105, 84, 798, 504],
+            [110, 94, 798, 504],
+        ]
+    )
+
+    labels = torch.tensor([class_to_index["horse"], class_to_index["horse"]])
+
     tensor = torch.zeros(1, 7, 7, 30)
 
     one_hot = [0.0 for _ in range(20)]
@@ -75,8 +84,90 @@ def sample_yolo_data_1() -> dict[str, Any]:
 
     tensor[0, 2, 2, :] = torch.tensor(cell_tensor)
 
-    result = {"annotation": sample_annotation, "yolo_net_target_tensor": tensor}
+    result = {
+        "bboxes": bboxes,
+        "labels": labels,
+        "width": 1344,
+        "height": 896,
+        "yolo_net_target_tensor": tensor,
+    }
     return result
+
+
+@pytest.fixture
+def sample_yolo_bboxes_1() -> dict[str, Any]:
+    # x, y, x, y
+    bboxes = torch.tensor(
+        [[100, 100, 200, 200], [101, 101, 200, 200], [150, 150, 250, 250]]
+    )
+
+    labels = torch.tensor([5, 5, 10])
+
+    expected_tensor = torch.zeros(7, 7, 30)
+
+    cell_size = 448 / 7
+    # bboxes one and two
+    expected_offset_x = (100 + 200) / 2 % cell_size / cell_size
+    expected_offset_y = (100 + 200) / 2 % cell_size / cell_size
+    expected_width = (200 - 100) / 448
+    expected_height = (200 - 100) / 448
+
+    expected_offset_x_2 = (101 + 200) / 2 % cell_size / cell_size
+    expected_offset_y_2 = (101 + 200) / 2 % cell_size / cell_size
+    expected_width_2 = (200 - 101) / 448
+    expected_height_2 = (200 - 101) / 448
+
+    one_hot = [0.0 for _ in range(20)]
+    one_hot[5] = 1
+
+    expected_tensor[2, 2, :] = torch.tensor(
+        [
+            expected_offset_x,
+            expected_offset_y,
+            expected_width,
+            expected_height,
+            1.0,
+            expected_offset_x_2,
+            expected_offset_y_2,
+            expected_width_2,
+            expected_height_2,
+            1.0,
+        ]
+        + one_hot
+    )
+
+    # bboxes three
+    expected_offset_x_3 = (150 + 250) / 2 % cell_size / cell_size
+    expected_offset_y_3 = (150 + 250) / 2 % cell_size / cell_size
+    expected_width_3 = (250 - 150) / 448
+    expected_height_3 = (250 - 150) / 448
+
+    one_hot_3 = [0.0 for _ in range(20)]
+    one_hot_3[10] = 1
+
+    expected_tensor[3, 3, :] = torch.tensor(
+        [
+            expected_offset_x_3,
+            expected_offset_y_3,
+            expected_width_3,
+            expected_height_3,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+        + one_hot_3
+    )
+
+    return {
+        "bboxes": bboxes,
+        "labels": labels,
+        "width": 448,
+        "height": 448,
+        "yolo_net_target_tensor": expected_tensor,
+    }
 
 
 @pytest.fixture

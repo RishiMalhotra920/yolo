@@ -248,33 +248,37 @@ def display_random_images(
     plt.show()
 
 
-def transform_preds_into_bboxes(
+def transform_yolo_grid_into_bboxes_confidences_and_labels(
     preds: torch.Tensor,
     image_width: float,
     image_height: float,
-) -> list[tuple[float, float, float, float, float, str]]:
+) -> tuple[list[list[float]], list[float], list[str]]:
     """
-    takes in the preds tensor and returns a list of bboxes
+    takes in the preds or labels tensor and returns a list of bboxes
     Args:
-        preds: shape (1, 7, 7, 30)
+        preds: shape (7, 7, 30)
         image_width: int - the original image width
         image_height: int - the original image height
 
     Returns:
-        list of bboxes of shape (x_top_left, y_top_left, width, height)
+        bboxes: list[list[float]] - list of bboxes in xyxy format
+        confidences: list[float] - list of confidences
+        labels: list[str] - list of labels
     """
 
     bboxes = []
+    confidences = []
+    labels = []
     cell_width = image_width / 7
     cell_height = image_height / 7
 
     for grid_x in range(7):
         for grid_y in range(7):
             for b in range(2):
-                x_center_relative = float(preds[0, grid_x, grid_y, b * 5].item())
-                y_center_relative = float(preds[0, grid_x, grid_y, b * 5 + 1].item())
-                width_relative = float(preds[0, grid_x, grid_y, b * 5 + 2].item())
-                height_relative = float(preds[0, grid_x, grid_y, b * 5 + 3].item())
+                x_center_relative = float(preds[grid_x, grid_y, b * 5].item())
+                y_center_relative = float(preds[grid_x, grid_y, b * 5 + 1].item())
+                width_relative = float(preds[grid_x, grid_y, b * 5 + 2].item())
+                height_relative = float(preds[grid_x, grid_y, b * 5 + 3].item())
 
                 x_start = image_width / 7 * grid_x
                 y_start = image_height / 7 * grid_y
@@ -287,14 +291,17 @@ def transform_preds_into_bboxes(
                 x = x_center - width / 2
                 y = y_center - height / 2
 
-                confidence = float(preds[0, grid_x, grid_y, b * 5 + 4].item())
-                label_vec = preds[0, grid_x, grid_y, 10:]
+                confidence = float(preds[grid_x, grid_y, b * 5 + 4].item())
+                label_vec = preds[grid_x, grid_y, 10:]
                 label_idx = int(torch.argmax(label_vec).item())
                 label = index_to_class[label_idx]
 
-                bboxes.append((x, y, width, height, confidence, label))
+                # let's be consistent and use xyxy format everywhere
+                bboxes.append([x, y, x + width, y + height])
+                confidences.append(confidence)
+                labels.append(label)
 
-    return bboxes
+    return bboxes, confidences, labels
 
 
 def predict_on_random_pascal_voc_images(
@@ -305,6 +312,7 @@ def predict_on_random_pascal_voc_images(
     n: int = 5,
     seed: int | None = None,
 ):
+    # TODO: should refer to the YOLO grid output as yolo_grid and tensor of labels as labels
     if seed:
         random.seed(seed)
 
@@ -313,8 +321,14 @@ def predict_on_random_pascal_voc_images(
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
 
     for i, index in enumerate(random_samples_idx):
-        image, annotations = dataset[index]
+        image, target_yolo_grid, metadata = dataset[index]
         ax = axes[i]
+        target_bboxes, target_confidences, target_labels = (
+            transform_yolo_grid_into_bboxes_confidences_and_labels(
+                target_yolo_grid, metadata["image_width"], metadata["image_height"]
+            )
+        )
+        print("shapes", image.shape, target_labels, metadata["image_width"], metadata)
         # pred_logits = model(image.unsqueeze(0))
         # print('pred_logits', pred_logits)
         # pred = int(torch.argmax(pred_logits.squeeze()).item())
@@ -329,24 +343,22 @@ def predict_on_random_pascal_voc_images(
 
         # Loop through the objects and draw each one
 
-        objects = annotations["annotation"]["object"]
-        for obj in objects:
-            bbox = obj["bndbox"]
-            x = int(bbox["xmin"])
-            y = int(bbox["ymin"])
+        # objects = annotations["annotation"]["object"]
+        for i in range(len(target_bboxes)):
+            x1, y1, x2, y2 = target_bboxes[i]
+            label = target_labels[i]
+            width = x2 - x1
+            height = y2 - y1
 
-            width = int(bbox["xmax"]) - x
-            height = int(bbox["ymax"]) - y
-
-            # Create a rectangle patch for each object and add it to the plot
             rect = patches.Rectangle(
-                (x, y), width, height, linewidth=2, edgecolor="r", facecolor="none"
+                (x1, y1), width, height, linewidth=2, edgecolor="r", facecolor="none"
             )
+
             ax.add_patch(rect)
             ax.text(
-                x,
-                y - 10,
-                obj["name"],
+                x1,
+                y1 - 10,
+                target_labels[i],
                 color="white",
                 fontsize=12,
                 bbox=dict(facecolor="red", alpha=0.5),
@@ -354,23 +366,31 @@ def predict_on_random_pascal_voc_images(
 
         # predictions
 
-        preds = model(image.unsqueeze(0))  # (1, 7, 7, 30)
+        pred_yolo_grid = model(image.unsqueeze(0)).squeeze()  # (7, 7, 30)
 
-        image_width = float(annotations["annotation"]["size"]["width"])
-        image_height = float(annotations["annotation"]["size"]["height"])
+        image_width = metadata["image_width"]
+        image_height = metadata["image_height"]
 
-        bboxes = transform_preds_into_bboxes(preds, image_width, image_height)
+        bboxes, confidences, labels = (
+            transform_yolo_grid_into_bboxes_confidences_and_labels(
+                pred_yolo_grid, image_width, image_height
+            )
+        )
 
         # get the predicted bounding boxes
 
         confidence_threshold = 0.01
 
-        for bbox in bboxes:
-            x, y, width, height, confidence, label = bbox
+        for i in range(len(bboxes)):
+            x1, y1, x2, y2 = bboxes[i]
+            width = x2 - x1
+            height = y2 - y1
+            confidence = confidences[i]
+            label = labels[i]
 
             if confidence > confidence_threshold:
                 rect = patches.Rectangle(
-                    (x, y),
+                    (x1, y1),
                     width,
                     height,
                     linewidth=2,
@@ -379,8 +399,8 @@ def predict_on_random_pascal_voc_images(
                 )
                 ax.add_patch(rect)
                 ax.text(
-                    x,
-                    y - 10,
+                    x1,
+                    y1 - 10,
                     label,
                     color="white",
                     fontsize=12,

@@ -58,7 +58,7 @@ def visualize(args):
     # )
 
     train_dataset, mini_val_dataset = create_datasets(
-        config["pascal_voc_root_dir"], data_transform, target_transform=None
+        config["pascal_voc_root_dir"], data_transform
     )
 
     yolo_net_model = yolo_net.YOLONet(dropout=0).to("cpu")

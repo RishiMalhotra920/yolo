@@ -48,7 +48,7 @@ def train_step(
     num_predictions = 0
     num_objects = 0  # number of objects in the batch
 
-    for batch, (X, y) in tqdm(
+    for batch, (X, y, metadata) in tqdm(
         enumerate(dataloader), total=len(dataloader), desc="Train Step", leave=False
     ):
         X, y = X.to(device), y.to(device)
@@ -143,7 +143,7 @@ def test_step(
     num_predictions = 0
 
     with torch.inference_mode():
-        for batch, (X, y) in tqdm(
+        for batch, (X, y, metadata) in tqdm(
             enumerate(dataloader), total=len(dataloader), desc="Test Step", leave=False
         ):
             X, y = X.to(device), y.to(device)
