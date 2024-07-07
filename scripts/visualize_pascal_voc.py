@@ -39,6 +39,7 @@ def visualize(args):
         [
             # transforms.RandomResizedCrop(50),
             transforms_v2.Resize((448, 448)),
+            # transforms_v2.RandomAffine(degrees=0, translate=(0.1, 0.1)),
             # transforms_v2.RandomHorizontalFlip(),
             # transforms_v2.RandomRotation((-30, 30)),
             # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
