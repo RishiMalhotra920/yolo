@@ -292,14 +292,19 @@ def transform_yolo_grid_into_bboxes_confidences_and_labels(
                 y = y_center - height / 2
 
                 confidence = float(preds[grid_x, grid_y, b * 5 + 4].item())
-                label_vec = preds[grid_x, grid_y, 10:]
-                label_idx = int(torch.argmax(label_vec).item())
-                label = index_to_class[label_idx]
 
-                # let's be consistent and use xyxy format everywhere
-                bboxes.append([x, y, x + width, y + height])
-                confidences.append(confidence)
-                labels.append(label)
+                label_vec = preds[grid_x, grid_y, 10:]
+
+                # yolo_grids without labels (eg: empty squares in a dataset) will have all 0s
+                # some yolo_grids have one bbox and the other bbox is filled with 0s -> 0 width
+                if not torch.all(label_vec == 0) and width > 0 and height > 0:
+                    label_idx = int(torch.argmax(label_vec).item())
+                    label = index_to_class[label_idx]
+
+                    # let's be consistent and use xyxy format everywhere
+                    bboxes.append([x, y, x + width, y + height])
+                    confidences.append(confidence)
+                    labels.append(label)
 
     return bboxes, confidences, labels
 
@@ -307,8 +312,10 @@ def transform_yolo_grid_into_bboxes_confidences_and_labels(
 def predict_on_random_pascal_voc_images(
     model: torch.nn.Module,
     dataset,
+    threshold,
     *,
-    class_names: list[str] | None = None,
+    show_preds: bool,
+    show_labels: bool,
     n: int = 5,
     seed: int | None = None,
 ):
@@ -320,92 +327,90 @@ def predict_on_random_pascal_voc_images(
 
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
 
+    print("in red are the ground truth bounding boxes")
+    print("in green are the predicted bounding boxes")
+
+    print("image paths from left to right:")
     for i, index in enumerate(random_samples_idx):
         image, target_yolo_grid, metadata = dataset[index]
+
         ax = axes[i]
-        target_bboxes, target_confidences, target_labels = (
+        ax.imshow(image.permute(1, 2, 0))
+        ax.set_title(metadata["image_path"])
+        target_bboxes, _, target_labels = (
             transform_yolo_grid_into_bboxes_confidences_and_labels(
                 target_yolo_grid, metadata["image_width"], metadata["image_height"]
             )
         )
-        print("shapes", image.shape, target_labels, metadata["image_width"], metadata)
-        # pred_logits = model(image.unsqueeze(0))
-        # print('pred_logits', pred_logits)
-        # pred = int(torch.argmax(pred_logits.squeeze()).item())
-        # print('pred', pred)
+        print(i, metadata["image_path"])
+        for label in target_labels:
+            print("Label: ", label)
 
-        ax.imshow(image.permute(1, 2, 0))
-        # if class_names:
-        #     ax.set_title(
-        #         f"Label: {label} {class_names[label]}\nPred: {pred} {class_names[pred]}")
-        # else:
-        #     ax.set_title(f"Label: {label}\nPred: {pred}")
+        if show_labels:
+            for i in range(len(target_bboxes)):
+                x1, y1, x2, y2 = target_bboxes[i]
+                label = target_labels[i]
+                width = x2 - x1
+                height = y2 - y1
 
-        # Loop through the objects and draw each one
-
-        # objects = annotations["annotation"]["object"]
-        for i in range(len(target_bboxes)):
-            x1, y1, x2, y2 = target_bboxes[i]
-            label = target_labels[i]
-            width = x2 - x1
-            height = y2 - y1
-
-            rect = patches.Rectangle(
-                (x1, y1), width, height, linewidth=2, edgecolor="r", facecolor="none"
-            )
-
-            ax.add_patch(rect)
-            ax.text(
-                x1,
-                y1 - 10,
-                target_labels[i],
-                color="white",
-                fontsize=12,
-                bbox=dict(facecolor="red", alpha=0.5),
-            )
-
-        # predictions
-
-        pred_yolo_grid = model(image.unsqueeze(0)).squeeze()  # (7, 7, 30)
-
-        image_width = metadata["image_width"]
-        image_height = metadata["image_height"]
-
-        bboxes, confidences, labels = (
-            transform_yolo_grid_into_bboxes_confidences_and_labels(
-                pred_yolo_grid, image_width, image_height
-            )
-        )
-
-        # get the predicted bounding boxes
-
-        confidence_threshold = 0.01
-
-        for i in range(len(bboxes)):
-            x1, y1, x2, y2 = bboxes[i]
-            width = x2 - x1
-            height = y2 - y1
-            confidence = confidences[i]
-            label = labels[i]
-
-            if confidence > confidence_threshold:
                 rect = patches.Rectangle(
                     (x1, y1),
                     width,
                     height,
                     linewidth=2,
-                    edgecolor="g",
+                    edgecolor="r",
                     facecolor="none",
                 )
+
                 ax.add_patch(rect)
                 ax.text(
                     x1,
                     y1 - 10,
-                    label,
+                    target_labels[i],
                     color="white",
                     fontsize=12,
-                    bbox=dict(facecolor="green", alpha=0.5),
+                    bbox=dict(facecolor="red", alpha=0.5),
                 )
+
+        if show_preds:
+            pred_yolo_grid = model(image.unsqueeze(0)).squeeze()  # (7, 7, 30)
+
+            image_width = metadata["image_width"]
+            image_height = metadata["image_height"]
+
+            bboxes, confidences, labels = (
+                transform_yolo_grid_into_bboxes_confidences_and_labels(
+                    pred_yolo_grid, image_width, image_height
+                )
+            )
+
+            # get the predicted bounding boxes
+
+            for i in range(len(bboxes)):
+                x1, y1, x2, y2 = bboxes[i]
+                width = x2 - x1
+                height = y2 - y1
+                confidence = confidences[i]
+                label = labels[i]
+
+                if confidence > threshold:
+                    rect = patches.Rectangle(
+                        (x1, y1),
+                        width,
+                        height,
+                        linewidth=2,
+                        edgecolor="g",
+                        facecolor="none",
+                    )
+                    ax.add_patch(rect)
+                    ax.text(
+                        x1,
+                        y1 - 10,
+                        label,
+                        color="white",
+                        fontsize=12,
+                        bbox=dict(facecolor="green", alpha=0.5),
+                    )
 
         ax.axis("off")
     plt.show()

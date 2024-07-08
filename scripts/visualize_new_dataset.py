@@ -42,7 +42,7 @@ def visualize(args):
         [
             transforms_v2.ToTensor(),
             transforms_v2.RandomAffine(
-                degrees=0, translate=(0.1, 0.1), scale=(1.0, 2.0), shear=0
+                degrees=(0, 0), translate=(0.1, 0.1), scale=(1.0, 1.2), shear=0
             ),
             transforms_v2.Resize((448, 448)),
             transforms_v2.Normalize(

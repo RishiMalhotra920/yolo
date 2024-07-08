@@ -19,43 +19,20 @@ config = yaml.safe_load(open("config.yaml"))
 
 
 def visualize(args):
-    # data_transform = transforms_v2.Compose(
-    #     [
-    #         # transforms.RandomResizedCrop(50),
-    #         # transforms_v2.Resize((224, 224)),
-    #         # transforms_v2.RandomHorizontalFlip(),
-    #         # transforms_v2.RandomRotation((-30, 30)),
-    #         # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-    #         # transforms_v2.ToTensor(),
-    #         transforms_v2.ToImage(),
-    #         transforms_v2.ToDtype(torch.float32, scale=True),
-    #         # transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #         #  std=[0.229, 0.224, 0.225]),
-    #         # transforms.RandomErasing()
-    #     ]
-    # )
-
     data_transform = transforms_v2.Compose(
         [
-            # transforms.RandomResizedCrop(50),
             transforms_v2.Resize((448, 448)),
             transforms_v2.RandomHorizontalFlip(),
-            transforms_v2.RandomRotation((-30, 30)),
-            transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
-            transforms_v2.ToTensor(),
-            transforms_v2.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            transforms_v2.RandomAffine(
+                degrees=(0, 30), translate=(0.1, 0.1), scale=(1.0, 1.2), shear=0
             ),
-            # transforms.RandomErasing()
+            # transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
+            transforms_v2.ToTensor(),
+            # transforms_v2.Normalize(
+            # mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            # ),
         ]
     )
-
-    # to_tensor_transform = transforms_v2.Compose(
-    #     [
-    #         transforms_v2.ToImage(),
-    #         transforms_v2.ToDtype(torch.float32, scale=True),
-    #     ]
-    # )
 
     train_dataset, mini_val_dataset = create_datasets(
         config["pascal_voc_root_dir"], data_transform
@@ -67,8 +44,15 @@ def visualize(args):
     if args.checkpoint_signature is not None:
         load_checkpoint(model, args.checkpoint_signature)
 
-    # TODO: this in 448x448 images. you need to scale this to the original image size
-    predict_on_random_pascal_voc_images(model, mini_val_dataset, n=5, seed=4)
+    predict_on_random_pascal_voc_images(
+        model,
+        mini_val_dataset,
+        threshold=args.threshold,
+        show_preds=args.show_preds,
+        show_labels=args.show_labels,
+        n=5,
+        seed=4,
+    )
 
     # display_random_images(train_dataset,
     #   class_names=class_names, n=5, seed=4)
@@ -76,7 +60,7 @@ def visualize(args):
 
 if __name__ == "__main__":
     # for example
-    # python visualize.py --run_id "IM-28" --checkpoint_path checkpoints/epoch_1
+    # python visualize_pascal_voc.py --checkpoint_signature IM-232:checkpoints/epoch_85 --threshold 0.5 --seed 420 --show_preds true
     # --hidden_units 256
     parser = argparse.ArgumentParser(description="Visualize the model's predictions")
     # parser.add_argument("--hidden_units", type=int,
@@ -87,7 +71,38 @@ if __name__ == "__main__":
         help="The path to the checkpoint in the format RUN_ID:CHECKPOINT_PATH eg: IM-28:checkpoints/epoch_5",
         required=False,
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="The seed for the random number generator",
+        required=False,
+        default=42,
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        help="The threshold for the bounding box",
+        required=True,
+    )
+    parser.add_argument(
+        "--show_labels",
+        type=bool,
+        help="Whether to show the labels on the bounding boxes",
+        required=False,
+        default=False,
+    )
+    parser.add_argument(
+        "--show_preds",
+        type=bool,
+        help="Whether to show the scores on the bounding boxes",
+        required=False,
+        default=False,
+    )
+
     args = parser.parse_args()
+    assert (
+        args.show_labels or args.show_preds
+    ), "You must show either labels or predictions"
     if args.checkpoint_signature is None:
         print("Not loading checkpoint. Model will be randomly initialized.")
     visualize(args)

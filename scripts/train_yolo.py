@@ -44,16 +44,16 @@ def train(args) -> None:
 
     # yolo uses 448x448 images
     # Create transforms
+
     data_transform = transforms_v2.Compose(
         [
             # transforms.RandomResizedCrop(50),
             transforms_v2.Resize((448, 448)),
-            # applying these transforms to the pascal voc dataset means you have to change the labels in accordance with the transforms
-            # and hence change the VOCDataset to a custom implementation
-            # as in here: https://github.com/motokimura/yolo_v1_pytorch/blob/master/voc.py
-            # i don't have the time for that!
-            # transforms_v2.RandomHorizontalFlip(),
-            # transforms_v2.RandomRotation((-30, 30)),
+            transforms_v2.RandomHorizontalFlip(),
+            # translate x, y by up to 0.1ximage_width, 0.1ximage_height, scale by 1.0-1.2ximage_dim, rotate by -30 to 30 degrees
+            transforms_v2.RandomAffine(
+                degrees=(0, 30), translate=(0.1, 0.1), scale=(1.0, 1.2), shear=0
+            ),
             transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
             transforms_v2.ToTensor(),
             transforms_v2.Normalize(
@@ -89,6 +89,7 @@ def train(args) -> None:
             "../src/loss_functions/yolo_loss_function.py",
         ],
     )
+
     # if args.device == "cuda":
     # do this even on cpu to figure out if the model on the gpu is working.
     # going forward, save the weights without the nn.DataParallel?
@@ -150,6 +151,8 @@ def train(args) -> None:
         "optimizer": "Adam",
         "device": args.device,
         "dropout": args.dropout,
+        "num_workers": num_workers,
+        "command": " ".join(sys.argv),
     }
 
     run_manager.log_data(

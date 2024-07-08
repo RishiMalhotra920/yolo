@@ -125,7 +125,7 @@ class CustomVOCDetection(VOCDetection):
 
     def __getitem__(
         self, index: int
-    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, int]]:
+    ) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any]]:
         image, annotation = super().__getitem__(index)
 
         # transformed_image,  = self.transform(image)
@@ -138,6 +138,7 @@ class CustomVOCDetection(VOCDetection):
             "image_id": index,
             "image_width": image_width,
             "image_height": image_height,
+            "image_path": annotation["annotation"]["filename"],
         }
 
         boxes = []
@@ -160,7 +161,7 @@ class CustomVOCDetection(VOCDetection):
         )  # type: ignore
 
         out_image, out_boxes = self.transform(image, boxes)
-        # out_label = torch.tensor(labels)
+
         out_label = categorize_bboxes_into_grid(
             out_boxes, torch.tensor(labels), image_width, image_height
         )
