@@ -7,7 +7,7 @@ tasks:
   - name: yolo_with_data_augmentation_0.0001
     git_checkout_target: yolo_with_custom_dataset
     run: |
-      python train_yolo.py --run_name yolo_with_data_augmentation_0.0001 --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 50 --batch_size 64 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 5
+      python train_yolo.py --run_name yolo_with_data_augmentation_0.0001 --continue_from_image_net_checkpoint_signature IM-122:checkpoints/epoch_14 --num_epochs 135 --batch_size 64 --lr_scheduler fixed --lr 0.0001 --dropout 0.5 --device cuda --checkpoint_interval 5
 
 
 
