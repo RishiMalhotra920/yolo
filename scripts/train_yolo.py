@@ -63,7 +63,7 @@ def train(args) -> None:
         ]
     )
 
-    cpu_count = os.cpu_count()
+    cpu_count = 16  # 16 worker threads more than enough.
     num_workers = cpu_count if cpu_count is not None else 0
 
     # Create DataLoaders with help from data_setup.py
