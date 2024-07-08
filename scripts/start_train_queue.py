@@ -61,6 +61,12 @@ def start_train_queue(path: str) -> None:
         print(
             f"\033[1;36m============================================== Executing task {task_index}: {task['name']} ==============================================\033[0m\n"
         )
+
+        # figure out the process for checking out to a new branch that doesn't exist on local yet
+        # steps:
+        # git fetch
+        # git checkout -b <branch_name> origin/<branch_name>
+
         git_checkout_subtask = f"git checkout {task['git_checkout_target']} && git pull"
         git_run_subtask = f"{task['run']} > logs/{task['name']}.txt"
 
