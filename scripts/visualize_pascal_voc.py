@@ -51,7 +51,9 @@ def visualize(args):
         show_preds=args.show_preds,
         show_labels=args.show_labels,
         n=5,
-        seed=4,
+        seed=args.seed,
+        apply_nms=args.apply_nms,
+        nms_iou_threshold=args.nms_iou_threshold,
     )
 
     # display_random_images(train_dataset,
@@ -60,7 +62,7 @@ def visualize(args):
 
 if __name__ == "__main__":
     # for example
-    # python visualize_pascal_voc.py --checkpoint_signature IM-232:checkpoints/epoch_85 --threshold 0.5 --seed 420 --show_preds true
+    # python visualize_pascal_voc.py --checkpoint_signature IM-254:checkpoints/epoch_335 --threshold 0.5 --seed 420 --show_preds true
     # --hidden_units 256
     parser = argparse.ArgumentParser(description="Visualize the model's predictions")
     # parser.add_argument("--hidden_units", type=int,
@@ -97,6 +99,20 @@ if __name__ == "__main__":
         help="Whether to show the scores on the bounding boxes",
         required=False,
         default=False,
+    )
+    parser.add_argument(
+        "--apply_nms",
+        type=bool,
+        help="Whether to apply non-maximum suppression",
+        required=False,
+        default=False,
+    )
+    parser.add_argument(
+        "--nms_iou_threshold",
+        type=float,
+        help="The threshold for non-maximum suppression",
+        required=False,
+        default=0.0,
     )
 
     args = parser.parse_args()

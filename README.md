@@ -49,3 +49,7 @@ To scroll on tmux sessions, press `ctrl+b followed by [`
 Or run
 
 `echo "set -g mode-mouse on" > .tmux.conf` and reboot the session.
+
+## To zip files:
+
+find . -name "\*.py" -type f -print | zip python_files.zip -@

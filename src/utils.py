@@ -31,6 +31,39 @@ class_to_index = {cls_name: idx for idx, cls_name in enumerate(VOC_CLASSES)}
 index_to_class = {idx: cls_name for idx, cls_name in enumerate(VOC_CLASSES)}
 
 
+def non_max_suppression(boxes, scores, iou_threshold=0.5):
+    # Convert to (x1, y1, x2, y2) format
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    areas = (x2 - x1) * (y2 - y1)
+    order = scores.argsort(descending=True)
+
+    keep = []
+    while order.numel() > 0:
+        i = order[0]
+        keep.append(i)
+        if order.numel() == 1:
+            break
+
+        xx1 = x1[order[1:]].clamp(min=x1[i])
+        yy1 = y1[order[1:]].clamp(min=y1[i])
+        xx2 = x2[order[1:]].clamp(max=x2[i])
+        yy2 = y2[order[1:]].clamp(max=y2[i])
+
+        w = (xx2 - xx1).clamp(min=0)
+        h = (yy2 - yy1).clamp(min=0)
+        inter = w * h
+
+        ovr = inter / (areas[i] + areas[order[1:]] - inter)
+        inds = (ovr <= iou_threshold).nonzero().squeeze()
+        order = order[inds + 1]
+
+    return torch.tensor(keep)
+
+
 def calculate_iou(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torch.Tensor:
     """
     tensor1 and tensor2 are of shape (batch_size, S, S, 4)
@@ -248,6 +281,78 @@ def display_random_images(
     plt.show()
 
 
+from torchvision.ops import nms
+
+
+def nms_by_class(
+    bboxes: torch.Tensor,
+    scores: torch.Tensor,
+    classes: torch.Tensor,
+    iou_threshold: float,
+):
+    """
+    Perform non-maximum suppression on the bounding boxes by class.
+
+    Args:
+        bboxes: torch.Tensor of shape (num_bboxes, 4) - the bounding boxes
+        scores: torch.Tensor of shape (num_bboxes) - the confidence scores
+        classes: torch.Tensor of shape (num_bboxes) - the class labels
+        iou_threshold: float - the iou threshold for non-maximum suppression
+
+    Returns:
+        tuple: (bboxes, classes, scores) - the filtered bounding boxes, classes, and scores
+    """
+
+    bboxes_and_conf_by_class: dict[int, list[torch.Tensor]] = {i: [] for i in range(20)}
+    for bbox, bbox_class, conf in zip(bboxes, classes, scores):
+        bboxes_and_conf_by_class[int(bbox_class.item())].append(
+            torch.cat([bbox, conf.unsqueeze(-1)], dim=-1)
+        )
+
+    # print("this is bboxes_and_conf_by_class", bboxes_and_conf_by_class)
+    # we have a
+    # {0: [tensor([0, 0, 10, 10, 0, 0.9]), tensor([1, 1, 11, 11, 0, 0.8]), tensor([20, 20, 30, 30, 0, 0.7])],
+    #  1: [tensor([0, 0, 10, 10, 1, 0.9]), tensor([21, 21, 31, 31, 1, 0.8])]}
+    # and so on
+
+    bboxes_to_return = []
+    classes_to_return = []
+    confidences_to_return = []
+    for class_idx, bboxes_and_conf in bboxes_and_conf_by_class.items():
+        # print("this is", bboxes_and_conf)
+        bbox_tensor = (
+            torch.stack(bboxes_and_conf)[:, :4] if bboxes_and_conf else torch.tensor([])
+        )
+        # print("this is bbox_tensor", bbox_tensor)
+        conf_tensor = (
+            torch.stack(bboxes_and_conf)[:, -1] if bboxes_and_conf else torch.tensor([])
+        )
+
+        if len(bbox_tensor) != 0:
+            nms_indices = nms(bbox_tensor, conf_tensor, iou_threshold)
+            bboxes_to_return.append(bbox_tensor[nms_indices, :4])
+            classes_to_return.append(class_idx * torch.ones(len(nms_indices)))
+            confidences_to_return.append(conf_tensor[nms_indices])
+
+    # print("this is bboxes", bboxes_to_return)
+    # # we have an array of tensors for each class
+    # # bboxes_to_return = [tensor([[0, 0, 10, 10], [20, 20, 30, 30]]), tensor([[0, 0, 10, 10], [21, 21, 31, 31]])]
+    # # classes_to_return = [tensor([0, 0]), tensor([1, 1])]
+    # # confidences_to_return = [tensor(0.9), tensor(0.8)]
+
+    return (
+        torch.cat(bboxes_to_return, dim=0) if bboxes_to_return else torch.tensor([]),
+        torch.cat(confidences_to_return, dim=0)
+        if confidences_to_return
+        else torch.tensor([]),
+        torch.cat(classes_to_return, dim=0)
+        if classes_to_return
+        else torch.tensor([])
+        if confidences_to_return
+        else torch.tensor([]),
+    )
+
+
 def transform_yolo_grid_into_bboxes_confidences_and_labels(
     preds: torch.Tensor,
     image_width: float,
@@ -318,6 +423,8 @@ def predict_on_random_pascal_voc_images(
     show_labels: bool,
     n: int = 5,
     seed: int | None = None,
+    apply_nms: bool = True,
+    nms_iou_threshold: float = 0.5,
 ):
     # TODO: should refer to the YOLO grid output as yolo_grid and tensor of labels as labels
     if seed:
@@ -378,16 +485,31 @@ def predict_on_random_pascal_voc_images(
             image_width = metadata["image_width"]
             image_height = metadata["image_height"]
 
-            bboxes, confidences, labels = (
+            all_bboxes, all_confidences, all_labels = (
                 transform_yolo_grid_into_bboxes_confidences_and_labels(
                     pred_yolo_grid, image_width, image_height
                 )
             )
 
+            if apply_nms:
+                bboxes, confidences, labels = nms_by_class(
+                    torch.tensor(all_bboxes),
+                    torch.tensor(all_confidences),
+                    torch.tensor([class_to_index[label] for label in all_labels]),
+                    nms_iou_threshold,
+                )
+                labels = [
+                    index_to_class[int(this_label.item())] for this_label in labels
+                ]
+                print("after nms", len(bboxes))
+            else:
+                bboxes, confidences, labels = all_bboxes, all_confidences, all_labels
+
             # get the predicted bounding boxes
 
             for i in range(len(bboxes)):
                 x1, y1, x2, y2 = bboxes[i]
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
                 width = x2 - x1
                 height = y2 - y1
                 confidence = confidences[i]
