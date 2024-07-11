@@ -39,6 +39,13 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
+Create a `config.yaml` file under `scripts` with 
+
+```
+image_net_data_dir: <path to image net dir>. # (This folder should contain the files/folders (ILSVRC2012_devkit_t12.tar.gz, ILSVRC2012_img_train.tar
+pascal_voc_root_dir: <path to directory storing pascal voc dataset>. # (This folder should contain the files/folders VOCdevkit, VOCtrainval_11-May-2012.tar
+```
+
 YOLO pretraining inference:
 
 Download the checkpoint from [here](https://drive.google.com/file/d/1tlUXxBP7nR5PrwyugNWjf3kwYwBEkmjn/view?usp=drive_link) and place it at `scripts/checkpoints/IM-122/epoch_14.pth`. Weird location? I know. Then run the command below:
