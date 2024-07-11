@@ -141,21 +141,23 @@ class YOLONet(nn.Module):
 
 if __name__ == "__main__":
     # YOLO pretrain net
-    model = YOLOPretrainNet(dropout=0)
+    # model = YOLOPretrainNet(dropout=0)
+
+    # summary(
+    #     model,
+    #     (1, 3, 224, 224),
+    #     depth=5,
+    #     col_names=["input_size", "output_size", "num_params", "params_percent"],
+    #     row_settings=["var_names"],
+    # )
+
+    # YOLO net
+    model = YOLONet(dropout=0)
 
     summary(
         model,
-        (1, 3, 224, 224),
+        (1, 3, 448, 448),
         depth=5,
         col_names=["input_size", "output_size", "num_params", "params_percent"],
         row_settings=["var_names"],
     )
-
-    # YOLO net
-    # model = YOLONet(dropout=0)
-
-    # summary(model, (1, 3, 448, 448),
-    #         depth=5,
-    #         col_names=["input_size", "output_size",
-    #                    "num_params", "params_percent"],
-    #         row_settings=["var_names"])

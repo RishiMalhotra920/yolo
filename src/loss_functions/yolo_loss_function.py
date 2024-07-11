@@ -1,105 +1,164 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
+
+from src.utils import calculate_iou
 
 
 class YOLOLoss(nn.Module):
     def __init__(self):
         super(YOLOLoss, self).__init__()
+        self.lambda_coord = 5
+        self.lambda_noobj = 0.5
 
-    def forward(self, inputs, targets):
-        lambda_coord = 5
-        lambda_noobj = 0.5
-        num_anchors = 2
-        num_classes = 20
-        batch_size = inputs.shape[0]
-        grid_size = inputs.shape[2]
-        stride = 1 / grid_size
+    def forward(
+        self, preds: torch.Tensor, labels: torch.Tensor
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
+        """
+        preds and labels are of shape (batch_size, S, S, B * 5 + C)
 
-        # Split the inputs into bounding box, objectness and class predictions
-        bounding_box_predictions = inputs[:, :num_anchors * 5, :, :]
+        assuming each grid cell produces two bounding boxes and each target has two bounding boxes,
+        for simplicity, we only calculate the loss for the bbox with the highest ious.
+        """
+        bs = preds.shape[0]  # batch size
+        B = 2
+        # C = 20
+        S = 7
 
-        objectness_predictions = inputs[:, num_anchors *
-                                        5:num_anchors * 5 + num_anchors, :, :]
+        # TODO; maybe you can initialize these as zero tensors and then assign them.
+        ious_per_cell = torch.zeros((bs, S, S, B * B), device=preds.device)
+        xy_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
+        wh_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
+        conf_losses = torch.zeros((bs, S, S, B * B), device=preds.device)
 
-        class_predictions = inputs[:, num_anchors * 5 + num_anchors:, :, :]
+        # try to take a top down approach and see if you
+        for pred_idx in range(B):
+            for label_idx in range(B):
+                this_pred_idx = pred_idx * 5
+                this_label_idx = label_idx * 5
 
-        # Split the targets into bounding box, objectness and class targets
-        bounding_box_targets = targets[:, :num_anchors * 5, :, :]
-        objectness_targets = targets[:, num_anchors *
-                                     5:num_anchors * 5 + num_anchors, :, :]
-        class_targets = targets[:, num_anchors * 5 + num_anchors:, :, :]
+                this_pred_x = preds[:, :, :, this_pred_idx]
+                this_pred_y = preds[:, :, :, this_pred_idx + 1]
+                # ensure that w and h are positive since they are square rooted.
+                this_pred_w = torch.relu(preds[:, :, :, this_pred_idx + 2])
+                this_pred_h = torch.relu(preds[:, :, :, this_pred_idx + 3])
+                this_pred_conf = preds[:, :, :, this_pred_idx + 4]
 
-        # Calculate the loss for the bounding box predictions
-        bounding_box_predictions = bounding_box_predictions.view(
-            batch_size, num_anchors, 5, grid_size, grid_size)
-        bounding_box_targets = bounding_box_targets.view(
-            batch_size, num_anchors, 5, grid_size, grid_size)
-        bounding_box_predictions = bounding_box_predictions.permute(
-            0, 1, 3, 4, 2)
-        bounding_box_targets = bounding_box_targets.permute(0, 1, 3, 4, 2)
-        bounding_box_predictions_xy = torch.sigmoid(
-            bounding_box_predictions[:, :, :, :, :2])
-        bounding_box_predictions_wh = torch.exp(
-            bounding_box_predictions[:, :, :, :, 2:4])
-        bounding_box_targets_xy = bounding_box_targets[:, :, :, :, :2]
-        bounding_box_targets_wh = bounding_box_targets[:, :, :, :, 2:4]
-        bounding_box_predictions_confidence = torch.sigmoid(
-            bounding_box_predictions[:, :, :, :, 4:5])
-        bounding_box_targets_confidence = bounding_box_targets[:, :, :, :, 4:5]
-        bounding_box_targets_confidence = bounding_box_targets_confidence.unsqueeze(
-            -1)
-        bounding_box_predictions_xy = bounding_box_predictions_xy * stride + \
-            torch.arange(grid_size).view(1, 1, -1, 1).float() * stride
-        bounding_box_predictions_wh = bounding_box_predictions_wh * stride
-        bounding_box_targets_xy = bounding_box_targets_xy * stride + \
-            torch.arange(grid_size).view(1, 1, -1, 1).float() * stride
-        bounding_box_targets_wh = bounding_box_targets_wh * stride
-        bounding_box_predictions_xy_min = bounding_box_predictions_xy - \
-            bounding_box_predictions_wh / 2
-        bounding_box_predictions_xy_max = bounding_box_predictions_xy + \
-            bounding_box_predictions_wh / 2
-        bounding_box_targets_xy_min = bounding_box_targets_xy - bounding_box_targets_wh / 2
-        bounding_box_targets_xy_max = bounding_box_targets_xy + bounding_box_targets_wh / 2
-        bounding_box_predictions_area = bounding_box_predictions_wh.prod(
-            dim=-1)
-        bounding_box_targets_area = bounding_box_targets_wh.prod(dim=-1)
-        bounding_box_predictions_intersection_min = torch.max(
-            bounding_box_predictions_xy_min, bounding_box_targets_xy_min)
-        bounding_box_predictions_intersection_max = torch.min(
-            bounding_box_predictions_xy_max, bounding_box_targets_xy_max)
-        bounding_box_predictions_intersection_wh = torch.clamp(
-            bounding_box_predictions_intersection_max - bounding_box_predictions_intersection_min, min=0)
-        bounding_box_predictions_intersection_area = bounding_box_predictions_intersection_wh.prod(
-            dim=-1)
-        bounding_box_predictions_union_area = bounding_box_predictions_area + \
-            bounding_box_targets_area - bounding_box_predictions_intersection_area
-        bounding_box_predictions_iou = bounding_box_predictions_intersection_area / \
-            bounding_box_predictions_union_area
-        bounding_box_targets_iou = bounding_box_targets_confidence
-        bounding_box_loss = torch.sum(
-            (bounding_box_predictions_iou - bounding_box_targets_iou) ** 2)
-        bounding_box_loss = bounding_box_loss / batch_size
+                this_label_x = labels[:, :, :, this_label_idx]
+                this_label_y = labels[:, :, :, this_label_idx + 1]
+                this_label_w = labels[:, :, :, this_label_idx + 2]
+                this_label_h = labels[:, :, :, this_label_idx + 3]
+                this_label_conf = labels[:, :, :, this_label_idx + 4]
 
-        # Calculate the loss for the objectness predictions
-        objectness_predictions = objectness_predictions.view(
-            batch_size, num_anchors, grid_size, grid_size)
-        objectness_targets = objectness_targets.view(
-            batch_size, num_anchors, grid_size, grid_size)
-        objectness_predictions = objectness_predictions.unsqueeze(-1)
-        objectness_targets = objectness_targets.unsqueeze(-1)
-        objectness_loss = torch.sum(
-            (objectness_predictions - objectness_targets) ** 2)
-        objectness_loss = objectness_loss / batch_size
+                this_xy_loss = F.mse_loss(
+                    this_pred_x, this_label_x, reduction="none"
+                ) + F.mse_loss(this_pred_y, this_label_y, reduction="none")
 
-        # Calculate the loss for the class predictions
-        class_predictions = class_predictions
-        class_targets = class_targets
-        class_loss = torch.nn.functional.cross_entropy(
-            class_predictions, class_targets)
-        class_loss = class_loss / batch_size
+                this_wh_loss = F.mse_loss(
+                    torch.sqrt(this_pred_w), torch.sqrt(this_label_w), reduction="none"
+                ) + F.mse_loss(
+                    torch.sqrt(this_pred_h), torch.sqrt(this_label_h), reduction="none"
+                )
+                this_conf_loss = F.mse_loss(
+                    this_pred_conf, this_label_conf, reduction="none"
+                )
 
-        # Calculate the total loss
-        total_loss = lambda_coord * bounding_box_loss + \
-            lambda_noobj * objectness_loss + class_loss
+                this_pred_bbox = preds[:, :, :, this_pred_idx : this_pred_idx + 4]
+                this_label_bbox = labels[:, :, :, this_label_idx : this_label_idx + 4]
 
-        return total_loss
+                this_iou = calculate_iou(this_pred_bbox, this_label_bbox)  # (bs, S, S)
+
+                ious_per_cell[:, :, :, pred_idx * B + label_idx] = (
+                    this_iou  # (bs, S, S)
+                )
+                xy_losses[:, :, :, pred_idx * B + label_idx] = this_xy_loss
+                wh_losses[:, :, :, pred_idx * B + label_idx] = this_wh_loss
+                conf_losses[:, :, :, pred_idx * B + label_idx] = this_conf_loss
+
+                # remember to multiply by lambda_noobj if the object is not present in the cell.
+
+        # we will create two matches between labels and predictions
+        # if argmax is 0 or 3, then label 0 responsible for pred 0, and label 1 responsible for pred 1.
+        # if argmax is 1 or 2, then label 1 responsible for pred 0, and label 0 responsible for pred 1.
+
+        match_one_per_cell = torch.argmax(ious_per_cell, dim=3)  # (bs, S, S)
+        match_two_per_cell = (
+            (torch.zeros((bs, S, S), device=preds.device) + 3) - match_one_per_cell
+        ).long()
+
+        # one-hot vector represents which predictor is responsible for predicting the object.
+        match_one_per_cell_onehot = torch.nn.functional.one_hot(
+            match_one_per_cell, num_classes=B * B
+        )  # (bs, S, S, B*B)
+
+        match_two_per_cell_onehot = torch.nn.functional.one_hot(
+            match_two_per_cell, num_classes=B * B
+        )  # (bs, S, S, B*B)
+
+        # we unsqueeze to help with broadcasting
+        obj_at_label_one_mask = (labels[:, :, :, 4] == 1).unsqueeze(-1)  # (bs, S, S, 1)
+        obj_at_label_two_mask = (labels[:, :, :, 9] == 1).unsqueeze(-1)  # (bs, S, S, 1)
+
+        # this mask does two things:
+        # 1. figures out which xy losses to consider for the loss calculation.
+        # eg: a [1, 0, 0, 1] at pos [bs, S, S] means consider xywh loss for pred 0-label 0 and pred 1-label 1 in the cell [bs, S, S].
+        # a [0, 1, 1, 0] at pos [bs, S, S] means consider xywh loss for pred 1-label 0 and pred 0-label 1 in the cell [bs, S, S].
+        # 2. only considers the xywh conf losses if the object is present in the cell.
+
+        matches_and_one_obj_ij_mask = (
+            obj_at_label_one_mask * match_one_per_cell_onehot
+            + obj_at_label_two_mask * match_two_per_cell_onehot
+        )  # (bs, S, S, B*B)
+
+        # multiply by one hot vector to get only the loss for the predictor responsible for the object.
+
+        xy_loss = torch.sum(matches_and_one_obj_ij_mask * xy_losses)
+        wh_loss = torch.sum(matches_and_one_obj_ij_mask * wh_losses)
+        conf_loss = torch.sum(matches_and_one_obj_ij_mask * conf_losses)
+
+        # if no object is present at label 0, then the confidence for pred 0 should be zero.
+        # if no object is present at label 1, then the confidence for pred 1 should be zero.
+        pred_bbox_one_confidence = preds[:, :, :, 4]  # (bs, S, S)
+        pred_bbox_two_confidence = preds[:, :, :, 9]
+
+        conf_noobj_loss = torch.sum(
+            torch.logical_not(obj_at_label_one_mask.squeeze())  # (bs, S, S)
+            * (pred_bbox_one_confidence**2)
+        ) + torch.sum(
+            torch.logical_not(obj_at_label_two_mask.squeeze())  # (bs, S, S)
+            * (pred_bbox_two_confidence**2)
+        )
+
+        obj_in_cell_i_mask = obj_at_label_one_mask  # (bs, S, S, 1)
+
+        clf_loss = F.mse_loss(
+            obj_in_cell_i_mask * preds[:, :, :, B * 5 :],
+            labels[:, :, :, B * 5 :],
+            reduction="sum",
+        )
+
+        # TODO: if you really want to mean these, create the mean over the number of preds and labels
+        # also don't just randomly use mean everywhere. stick to the formulae.
+
+        loss = (
+            self.lambda_coord * (xy_loss + wh_loss)
+            + conf_loss
+            + self.lambda_noobj * conf_noobj_loss
+            + clf_loss
+        )
+
+        return (
+            loss,
+            self.lambda_coord * xy_loss,
+            self.lambda_coord * wh_loss,
+            conf_loss,
+            self.lambda_noobj * conf_noobj_loss,
+            clf_loss,
+        )

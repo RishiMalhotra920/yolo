@@ -9,5 +9,11 @@ src/config.yaml
 src/.neptune/
 setup.sh
 **/config.yaml
+**/.neptune/
+**/temp/
 *.ipynb
+**/.*_cache/
+**/.benchmarks/
+**/checkpoints/
 .DS_Store
+scripts/logs/
