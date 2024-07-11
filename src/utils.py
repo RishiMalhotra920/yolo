@@ -3,6 +3,7 @@ import random
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import torch
+from torchvision import transforms as transforms_v2
 
 VOC_CLASSES = [
     "aeroplane",
@@ -480,6 +481,14 @@ def predict_on_random_pascal_voc_images(
                 )
 
         if show_preds:
+            image_color_transform = transforms_v2.Compose(
+                [
+                    transforms_v2.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    )
+                ]
+            )
+            image = image_color_transform(image)
             pred_yolo_grid = model(image.unsqueeze(0)).squeeze()  # (7, 7, 30)
 
             image_width = metadata["image_width"]
@@ -553,14 +562,21 @@ def predict_on_random_image_net_images(
 
     fig, axes = plt.subplots(1, n, figsize=(15, 3))
 
+    image_color_transform = transforms_v2.Compose(
+        [transforms_v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+    )
+
     for i, index in enumerate(random_samples_idx):
         image, label = dataset[index]
         ax = axes[i]
+        ax.imshow(image.permute(1, 2, 0))
+
+        image = image_color_transform(image)
+
         pred_logits = model(image.unsqueeze(0))
 
         pred = int(torch.argmax(pred_logits.squeeze()).item())
 
-        ax.imshow(image.permute(1, 2, 0))
         if class_names:
             ax.set_title(
                 f"Label: {label} {class_names[label]}\nPred: {pred} {class_names[pred]}"

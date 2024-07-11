@@ -79,9 +79,9 @@ def train(args) -> None:
     run_manager = RunManager(
         new_run_name=args.run_name,
         source_files=[
-            "lr_schedulers/*.py",
-            "models/*.py",
-            "trainers/*.py",
+            "../src/lr_schedulers/*.py",
+            "../src/models/*.py",
+            "../src/trainers/*.py",
             "pretrain_yolo.py",
         ],
     )

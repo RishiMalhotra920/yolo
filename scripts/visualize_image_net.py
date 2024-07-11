@@ -26,9 +26,6 @@ def visualize(args):
             transforms_v2.RandomRotation((-30, 30)),
             transforms_v2.ColorJitter(brightness=0.5, contrast=0.5),
             transforms_v2.ToTensor(),
-            transforms_v2.Normalize(
-                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-            ),
             # transforms.RandomErasing()
         ]
     )
@@ -51,7 +48,7 @@ def visualize(args):
 
     load_checkpoint(model, args.checkpoint_signature)
 
-    predict_on_random_image_net_images(model, mini_val_dataset, n=10, seed=42)
+    predict_on_random_image_net_images(model, mini_val_dataset, n=10, seed=4200)
 
     # display_random_images(train_dataset,
     #   class_names=class_names, n=5, seed=4)
