@@ -8,7 +8,9 @@ YOLO pretraining
 
 ## About and results
 
-I pretrain YOLO on ImageNet and then finetune it on Pascal VOC. The code may contain some inaccuracies but it works for a decent model.
+I pretrain YOLO on ImageNet and then finetune it on Pascal VOC. The code may contain some inaccuracies but it achieves 39% correct as compared to YOLO's 65% correct.
+
+Note: After finishing work for this project, I realized that the YOLO guys applied NMS before calculating accuracy whereas I only applied it for visualization. As a result, there are a lot more false positives and hence, my accuracy figures below have been understated.
 
 ### Pretraining YOLO
 
