@@ -11,7 +11,10 @@ YOLO pretraining
 I pretrain YOLO on ImageNet and then finetune it on Pascal VOC. The code may contain some inaccuracies but it achieves 39% correct as compared to YOLO's 65% correct.
 
 > Note: After finishing work for this project, I realized that the YOLO guys applied NMS before calculating accuracy whereas I only applied it for visualization. As a result, there are a lot more false positives and hence, my accuracy figures below have been understated.
+
 > Note 2: There was a bug in the code - I was training and validating on the train dataset. That's why my graphs show no overfitting. Initially, I thought that was because I was using a modest 0.5 but that's not true. Validation accuracy values shuold be overstated because of this. Training accuracy values will be the same.
+
+> Note 3: I was using DataParallel instead of DistributedDataParallel to run training across multiple GPUs on the same machine. This is slower and more memory intensive. in my future codebases, I'll be running training with DistributedDataParallel!
 
 ### Pretraining YOLO
 
